@@ -1,0 +1,35 @@
+{
+    "name": "componenta/interceptor",
+    "description": "Attribute-driven method interception for Componenta",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "componenta/config": "^1.0",
+        "componenta/di": "^1.0",
+        "componenta/reflection": "^1.0",
+        "componenta/scope": "^1.0",
+        "psr/container": "^2.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Componenta\\Interceptor\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Componenta\\Interceptor\\Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "stable",
+    "extra": {
+        "componenta": {
+            "config-providers": [
+                "Componenta\\Interceptor\\ConfigProvider"
+            ]
+        }
+    }
+}
