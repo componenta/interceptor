@@ -6,7 +6,7 @@
     "require": {
         "php": "^8.4",
         "componenta/config": "^1.0",
-        "componenta/di": "^1.0",
+        "componenta/di": "^2.0@dev",
         "componenta/reflection": "^1.0",
         "componenta/scope": "^1.0",
         "psr/container": "^2.0"
@@ -30,6 +30,11 @@
             "config-providers": [
                 "Componenta\\Interceptor\\ConfigProvider"
             ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
         }
     }
 }
