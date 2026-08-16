@@ -5,8 +5,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
-        "componenta/config": "^2.0",
-        "componenta/di": "^4.0",
+        "componenta/config": "^2.0.2",
+        "componenta/di": "^4.0.2",
         "componenta/reflection": "^2.0",
         "componenta/scope": "^1.0",
         "psr/container": "^2.0"
