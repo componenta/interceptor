@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
-use Componenta\DI\Exception\CallableExceptionInterface;
+use Componenta\DI\PreparedCallable;
+use Componenta\Interceptor\Internal\ResolvedCallableContext;
+use Throwable;
 
 /**
  * Executes callables through an interceptor pipeline.
@@ -27,7 +29,7 @@ use Componenta\DI\Exception\CallableExceptionInterface;
  */
 final class InterceptingExecutor implements CallableExecutorInterface, PipelineInterface
 {
-    /** @var InterceptorInterface[] */
+    /** @var list<InterceptorInterface> */
     private array $interceptors;
 
     private readonly ContextHandler $contextHandler;
@@ -45,12 +47,12 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
         private readonly CallableExecutorInterface $executor,
         InterceptorInterface ...$interceptors,
     ) {
-        $this->interceptors = $interceptors;
+        $this->interceptors = array_values($interceptors);
         $this->contextHandler = new ContextHandler($executor);
     }
 
     /**
-     * @throws CallableExceptionInterface
+     * @throws Throwable
      */
     public function call(mixed $callable, array $params = []): mixed
     {
@@ -61,7 +63,7 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
     }
 
     /**
-     * @throws CallableExceptionInterface
+     * @throws Throwable
      */
     public function resolve(mixed $callable): callable
     {
@@ -69,12 +71,12 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
     }
 
     /**
-     * @throws CallableExceptionInterface
+     * @throws Throwable
      */
     public function handle(CallableContextInterface $context): mixed
     {
         return ($this->composed ??= ChainComposer::compose($this->interceptors, $this->contextHandler))
-            ->handle($context);
+            ->handle($this->normalizeContext($context));
     }
 
     /**
@@ -87,13 +89,30 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
         return ChainComposer::compose($this->interceptors, $handler)
-            ->handle($context);
+            ->handle($this->normalizeContext($context));
+    }
+
+    private function normalizeContext(CallableContextInterface $context): CallableContextInterface
+    {
+        $callable = $context->getCallable();
+        if (!$callable instanceof PreparedCallable) {
+            return $context;
+        }
+
+        do {
+            $callable = $callable->callable;
+        } while ($callable instanceof PreparedCallable);
+
+        return new ResolvedCallableContext(
+            $context->withCallable($callable, [...$context->parameters]),
+            nativeArguments: true,
+        );
     }
 
     public function pipe(InterceptorInterface ...$interceptor): self
     {
         $copy = clone $this;
-        $copy->interceptors = [...$this->interceptors, ...$interceptor];
+        $copy->interceptors = [...$this->interceptors, ...array_values($interceptor)];
         $copy->composed = null;
 
         return $copy;

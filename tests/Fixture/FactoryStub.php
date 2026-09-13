@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace Componenta\Interceptor\Tests\Fixture;
 
 use Componenta\DI\FactoryInterface;
-use Componenta\DI\ProxyType;
 use RuntimeException;
 
 /**
  * In-memory {@see FactoryInterface} for tests.
  *
- * Records every {@see make()} call so tests can assert caching behavior.
+ * Records every {@see make()} call so tests can observe requested interceptor parameters.
  */
 final class FactoryStub implements FactoryInterface
 {
@@ -31,7 +30,7 @@ final class FactoryStub implements FactoryInterface
         $this->producers[$class] = $producer;
     }
 
-    public function make(string $entry, array $params = [], ?ProxyType $type = null): object
+    public function make(string $entry, array $params = []): object
     {
         $this->calls[] = [$entry, $params];
 

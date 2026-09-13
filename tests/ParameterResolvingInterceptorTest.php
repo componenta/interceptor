@@ -1,46 +1,33 @@
 <?php
 
 declare(strict_types=1);
-
+use Componenta\Config\Config;
+use Componenta\Config\DependencyDefinitions;
+use Componenta\Config\Environment;
+use Componenta\DI\CallableExecutorInterface;
+use Componenta\DI\ContainerFactory;
 use Componenta\DI\Resolver\Parameter\ParametersResolver;
-use Componenta\Interceptor\CallableContext;
-use Componenta\Interceptor\ContextHandler;
+use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\ParameterResolvingInterceptor;
-use Componenta\Interceptor\Tests\Fixture\PassThroughExecutor;
-use Componenta\Interceptor\Tests\Fixture\SpyParameterResolver;
 
-function paramResolvingInterceptor(SpyParameterResolver $spy): ParameterResolvingInterceptor
+final class ParameterResolutionDependency
 {
-    return new ParameterResolvingInterceptor(new ParametersResolver($spy));
 }
-
-function paramTerminal(): ContextHandler
+function parameterResolutionPipeline(): InterceptingExecutor
 {
-    return new ContextHandler(new PassThroughExecutor());
+    $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
+    return new InterceptingExecutor(
+        $container->get(CallableExecutorInterface::class),
+        new ParameterResolvingInterceptor($container->get(ParametersResolver::class))
+    );
 }
-
-describe('intercept()', function () {
-    it('does not invoke the resolver when the target callable takes no parameters', function () {
-        $spy = new SpyParameterResolver();
-        $interceptor = paramResolvingInterceptor($spy);
-        $context = new CallableContext(static fn (): string => 'value');
-
-        $result = $interceptor->intercept($context, paramTerminal());
-
-        expect($result)->toBe('value')
-            ->and($spy->callCount)->toBe(0);
-    });
-
-    it('resolves each parameter and forwards the resolved values to the callable', function () {
-        $spy = new SpyParameterResolver();
-        $interceptor = paramResolvingInterceptor($spy);
-        $context = new CallableContext(
-            static fn (string $foo, string $bar): string => "{$foo}|{$bar}",
-        );
-
-        $result = $interceptor->intercept($context, paramTerminal());
-
-        expect($result)->toBe('resolved-foo|resolved-bar')
-            ->and($spy->callCount)->toBe(2);
-    });
+it('preserves calls without parameters', function (): void {
+    expect(parameterResolutionPipeline()->call(static fn (): string => 'value'))->toBe('value');
+});
+it('resolves missing dependencies while retaining explicit arguments and PHP defaults', function (): void {
+    $explicit = new ParameterResolutionDependency();
+    $callable = static fn (ParameterResolutionDependency $dependency, string $label = 'default'): array => [$dependency, $label];
+    $pipeline = parameterResolutionPipeline();
+    expect($pipeline->call($callable, ['dependency' => $explicit]))->toBe([$explicit, 'default']);
+    expect($pipeline->call($callable)[0])->toBeInstanceOf(ParameterResolutionDependency::class);
 });

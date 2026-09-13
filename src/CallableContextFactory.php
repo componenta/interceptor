@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableResolverInterface;
-use Componenta\DI\Exception\CallableExceptionInterface;
+use Throwable;
 
 /**
  * Factory that resolves callables before creating contexts.
@@ -34,7 +34,7 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      * @param array<string, mixed> $attributes Arbitrary attributes.
      * @return CallableContext The created context.
      *
-     * @throws CallableExceptionInterface If the callable cannot be resolved.
+     * @throws Throwable If the callable cannot be resolved.
      */
     public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContext
     {

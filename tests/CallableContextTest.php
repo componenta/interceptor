@@ -46,3 +46,19 @@ describe('CallableContext::scoped()', function () {
         expect($context->parameters)->toBe(['id' => 42]);
     });
 });
+
+
+it('replaces a referenced parameter without changing the source or its aliases', function (string|int $key): void {
+    $value = 'original';
+    $marker = new stdClass();
+    $context = new CallableContext(
+        static fn (): null => null,
+        [$key => &$value, 'alias' => &$value, 2 => $marker],
+    );
+
+    $changed = $context->withParameter($key, 'changed');
+
+    expect($changed->parameters)->toBe([$key => 'changed', 'alias' => 'original', 2 => $marker])
+        ->and($context->parameters)->toBe([$key => 'original', 'alias' => 'original', 2 => $marker])
+        ->and($value)->toBe('original');
+})->with(['named key' => ['value'], 'integer key' => [5], 'numeric string key' => ['5']]);

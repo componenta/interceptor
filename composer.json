@@ -5,9 +5,9 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
-        "componenta/config": "^2.0.2",
-        "componenta/di": "^4.0.2",
-        "componenta/reflection": "^2.0",
+        "componenta/config": "^3.0.0",
+        "componenta/di": "^5.0.0",
+        "componenta/reflection": "^2.0.1",
         "componenta/scope": "^1.0",
         "psr/container": "^2.0"
     },
@@ -30,11 +30,17 @@
             "config-providers": [
                 "Componenta\\Interceptor\\ConfigProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "3.0.x-dev"
         }
     },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
         }
+    },
+    "scripts": {
+        "test": "@php vendor/bin/pest"
     }
 }

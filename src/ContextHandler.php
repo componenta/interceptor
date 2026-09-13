@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
-use Componenta\DI\Exception\CallableExceptionInterface;
+use Componenta\DI\PreparedCallable;
+use Componenta\Interceptor\Internal\ResolvedCallableContext;
+use Throwable;
 
 /**
  * Terminal handler that invokes the callable from context.
  *
  * This handler serves as the end of the interceptor chain,
- * delegating actual invocation to a {@see CallableExecutorInterface}.
+ * using {@see CallableExecutorInterface} for every invocation, including
+ * calls whose arguments have already been prepared.
  *
  * @example
  * ```php
@@ -32,15 +35,19 @@ final readonly class ContextHandler implements ContextHandlerInterface
     }
 
     /**
-     * Invokes the callable from the context using the executor.
+     * Delegates invocation while preserving whether arguments need DI resolution.
      *
      * @param CallableContextInterface $context The context containing the callable.
      * @return mixed The result of the callable invocation.
      *
-     * @throws CallableExceptionInterface If invocation fails.
+     * @throws Throwable If invocation fails.
      */
     public function handle(CallableContextInterface $context): mixed
     {
+        if ($context instanceof ResolvedCallableContext) {
+            return $this->executor->call(new PreparedCallable($context->getCallable()), $context->invocationArguments());
+        }
+
         return $this->executor->call($context->getCallable(), $context->parameters);
     }
 }

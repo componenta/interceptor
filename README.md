@@ -2,8 +2,6 @@
 
 ![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-blue)
 ![License MIT](https://img.shields.io/badge/License-MIT-green)
-![Tests](https://img.shields.io/badge/tests-53%20passed-brightgreen)
-![MSI](https://img.shields.io/badge/MSI-100%25-brightgreen)
 
 Middleware-style interceptor pipeline for PHP callables. Wrap any function, method or closure with cross-cutting logic (logging, caching, transactions, authorization, serialization) declared either via `pipe()` or method-level attributes.
 
@@ -30,7 +28,7 @@ composer require componenta/interceptor
 | `componenta/di` | Invokes callables and resolves missing parameters before interceptors run. |
 | `componenta/reflection` | Reads callable reflection and method attributes lazily. |
 | `componenta/config` | Registers context factories and attribute interceptors. |
-| `componenta/interceptor-app` | Compiles interceptor attributes into application cache. |
+| `componenta/interceptor-app` | Prepares native attribute metadata through app:build. |
 | `componenta/serialize-interceptor` | Ready-made result serialization interceptor backed by Symfony Serializer. |
 | `componenta/http-respond-interceptor` | Ready-made HTTP interceptor that wraps results into PSR-7 responses. |
 | `componenta/http-paginate-interceptor` | Ready-made HTTP interceptor for `PaginatorInterface` -> `ResourcePaginator`. |
@@ -173,7 +171,7 @@ use Componenta\Interceptor\Scope;
 $context = $context->withAttribute(CallableContext::SCOPE_ATTRIBUTE, Scope::HTTP);
 ```
 
-Attribute-level scope takes priority over instance-level scope. Interceptors without either `ScopedInterface` always match.
+Attribute-level scope takes priority over instance-level scope and is checked before resolving the interceptor's dependencies. Interceptors without either `ScopedInterface` always match.
 
 Built-in scopes: `HTTP`, `CONSOLE`, `GRPC`, `QUEUE`, `WEBSOCKET`. Custom scopes can be represented by `Componenta\Scope\ScopeName` or by a package-specific enum implementing `Componenta\Scope\ScopeInterface`.
 
@@ -212,14 +210,27 @@ new InterceptingExecutor(
 
 This lets attribute interceptors read resolved arguments (e.g., `$ctx->parameters` for cache keys).
 
+Parameter attributes run once during this preparation. The terminal passes prepared arguments through the configured executor using DI's PreparedCallable adapter, including changes made by downstream interceptors. Executor decoration still runs; nested InterceptingExecutor instances retain the original callable and its method attributes. Changing context attributes does not repeat preparation. Nested parameter-resolving interceptors reuse the prepared arguments.
+
+Reading, updating and removing a prepared fixed parameter by name or position address the same argument. Explicit null parameters and context attributes remain null even when a fallback is supplied; the fallback applies only to absent keys.
+
+PreparedCallable is recognized by call(), handle() and intercept(), including contexts created by CallableContextFactory. Nested adapters are unwrapped to the original callable. These entry points preserve context attributes and the original callable metadata without resolving its parameters again.
+
+PreparedCallable arguments follow native PHP binding: integer keys bind in insertion order, while string keys bind by name. Untouched arguments retain native binding errors. Editing parameters through the context switches to logical name/position binding, so removing a fixed argument preserves the positions of its neighbours.
+
+Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with withCallable() starts ordinary DI resolution for the new target. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor.
+
 ## Caching
 
-`AttributeInterceptor` caches attribute resolution on two levels:
+`AttributeInterceptor` caches native `ReflectionAttribute` metadata for stable method and function signatures. Every invocation constructs fresh attribute arguments and attributes via `ReflectionAttribute::newInstance()`, then calls `FactoryInterface::make()` for `Intercept` declarations. Scope selection is evaluated on those fresh instances.
 
-1. **Candidates per signature** — `#[Intercept]` instances are created once per method and reused.
-2. **Composed chains per terminal** — stored in a `WeakMap` keyed by the terminal handler; innermost link holds the terminal weakly, so GC reclaims entries when the terminal goes out of scope (e.g., when `pipe()` discards an old pipeline).
+Declarations whose attribute classes are not yet available are rechecked on later invocations; incomplete classification is not retained in the metadata cache.
 
-No configuration required — caching is always on. Closures bypass the cache (no stable signature).
+Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` retain their normal application-defined lifetime. Attributed interceptors do not share mutable state between invocations. Closures are not retained in the metadata cache.
+
+`componenta/interceptor-app` prepares a plain array of attribute positions through `app:build`. The map avoids repeated classification of attribute classes and can skip attribute reads for methods without interceptors. PHP remains responsible for argument construction, attribute targets and repeatability. Runtime works without this artifact.
+
+Version 3 uses DI 5 and Config 3. The old `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` keys and descriptor-array constructor argument are removed. App integration owns the optional `interceptors.map_file` setting. The old weak-terminal chain cache is removed.
 
 ## Container Wiring
 

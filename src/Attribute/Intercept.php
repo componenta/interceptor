@@ -22,8 +22,11 @@ use Componenta\Interceptor\InterceptorInterface;
 #[Attribute(Attribute::TARGET_METHOD | Attribute::TARGET_FUNCTION | Attribute::IS_REPEATABLE)]
 class Intercept
 {
+    /** @param class-string<InterceptorInterface> $interceptor
+     * @param array<string|int, mixed> $params */
     public function __construct(
         public readonly string $interceptor,
         public readonly array $params = [],
-    ) {}
+    ) {
+    }
 }

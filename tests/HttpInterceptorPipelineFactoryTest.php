@@ -1,76 +1,40 @@
 <?php
 
 declare(strict_types=1);
-
-use Componenta\Config\Config;
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
-use Componenta\Interceptor\CallableContext;
+use Componenta\Config\ConfigFactory;
+use Componenta\Config\Environment;
+use Componenta\DI\ContainerFactory;
 use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\ConfigKey;
 use Componenta\Interceptor\ConfigProvider;
 use Componenta\Interceptor\ContextHandlerInterface;
-use Componenta\Interceptor\Factory\HttpInterceptorPipelineFactory;
 use Componenta\Interceptor\InterceptorInterface;
-use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\PipelineInterface;
-use Componenta\Interceptor\Tests\Fixture\PassThroughExecutor;
-use Componenta\DI\ConfigKey as DependencyConfigKey;
-use Psr\Container\ContainerInterface;
 
-final readonly class HttpInterceptorPipelineFactoryTestContainer implements ContainerInterface
+final class HttpFactoryDependency
 {
-    /**
-     * @param array<string, mixed> $entries
-     */
-    public function __construct(private array $entries) {}
-
-    public function get(string $id): mixed
-    {
-        if (!$this->has($id)) {
-            throw new RuntimeException("Missing container entry: {$id}");
-        }
-
-        return $this->entries[$id];
-    }
-
-    public function has(string $id): bool
-    {
-        return array_key_exists($id, $this->entries);
-    }
+    public string $value = 'resolved';
 }
-
-final readonly class HttpInterceptorPipelineFactoryTestInterceptor implements InterceptorInterface
+final class HttpFactoryInterceptor implements InterceptorInterface
 {
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
-        return 'wrapped:' . $handler->handle($context);
+        return $context->parameters[0]->value . ':' . $handler->handle($context);
     }
 }
-
-describe('HTTP interceptor pipeline factory', function () {
-    it('registers the pipeline factory in the interceptor config provider', function () {
-        $config = (new ConfigProvider())();
-
-        expect($config[DependencyConfigKey::DEPENDENCIES][DependencyConfigKey::FACTORIES][PipelineInterface::class])
-            ->toBe(HttpInterceptorPipelineFactory::class);
-    });
-
-    it('builds an HTTP pipeline from configured interceptor service ids', function () {
-        $interceptor = new HttpInterceptorPipelineFactoryTestInterceptor();
-        $container = new HttpInterceptorPipelineFactoryTestContainer([
-            Config::class => new Config([
-                ConfigKey::HTTP_INTERCEPTORS => [
-                    HttpInterceptorPipelineFactoryTestInterceptor::class,
-                ],
-            ]),
-            Componenta\DI\CallableExecutorInterface::class => new PassThroughExecutor(),
-            ParametersResolver::class => new ParametersResolver(),
-            HttpInterceptorPipelineFactoryTestInterceptor::class => $interceptor,
-        ]);
-
-        $pipeline = (new HttpInterceptorPipelineFactory())($container);
-
-        expect($pipeline)->toBeInstanceOf(InterceptingExecutor::class)
-            ->and($pipeline->handle(new CallableContext(static fn (): string => 'ok')))->toBe('wrapped:ok');
-    });
+function httpFactoryContainer(mixed $interceptors): \Componenta\Config\ContainerValue
+{
+    $composition = (new ConfigFactory())->create(
+        new Environment([]),
+        new ConfigProvider(),
+        static fn (): array => [ConfigKey::HTTP_INTERCEPTORS => $interceptors]
+    );
+    return (new ContainerFactory())->create($composition->config, $composition->dependencies);
+}
+it('resolves callable parameters before configured HTTP interceptors execute', function (): void {
+    $pipeline = httpFactoryContainer([HttpFactoryInterceptor::class])->get(PipelineInterface::class);
+    expect($pipeline->call(static fn (HttpFactoryDependency $dependency): string => $dependency->value))->toBe('resolved:resolved');
+});
+it('reports malformed interceptor configuration before executing a callable', function (): void {
+    expect(fn () => httpFactoryContainer('wrong')->get(PipelineInterface::class))->toThrow(\Componenta\DI\Exception\ResolutionException::class, ConfigKey::HTTP_INTERCEPTORS);
 });

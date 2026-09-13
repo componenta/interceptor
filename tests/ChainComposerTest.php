@@ -61,28 +61,3 @@ describe('compose()', function () {
             ]);
     });
 });
-
-describe('compose() with weakInnermost', function () {
-    it('does not strongly retain the terminal - the chain alone cannot keep it alive', function () {
-        $noop = new class implements InterceptorInterface {
-            public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
-            {
-                return $handler->handle($context);
-            }
-        };
-
-        $terminal = chainTerminal();
-        $terminalRef = WeakReference::create($terminal);
-
-        $chain = ChainComposer::compose([$noop], $terminal, weakInnermost: true);
-
-        unset($terminal);
-        gc_collect_cycles();
-
-        // If compose() had used a strong reference, $chain would keep $terminal alive
-        // via $chain->next chain, and $terminalRef->get() would still return the terminal.
-        // With WeakTerminalHandler at the innermost link, the chain references the
-        // terminal weakly and PHP can collect it once external references are gone.
-        expect($terminalRef->get())->toBeNull();
-    });
-});

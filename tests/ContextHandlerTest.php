@@ -2,61 +2,43 @@
 
 declare(strict_types=1);
 
+use Componenta\Config\Config;
+use Componenta\Config\DependencyDefinitions;
+use Componenta\Config\Environment;
 use Componenta\DI\CallableExecutorInterface;
+use Componenta\DI\ContainerFactory;
 use Componenta\Interceptor\CallableContext;
-use Componenta\Interceptor\ContextHandler;
+use Componenta\Interceptor\InterceptingExecutor;
 
-final class ContextHandlerCountingExecutor implements CallableExecutorInterface
+function terminalInvocationPipeline(): InterceptingExecutor
 {
-    public int $calls = 0;
-
-    public function resolve(mixed $callable): callable
-    {
-        return $callable;
-    }
-
-    public function call(mixed $callable, array $params = []): mixed
-    {
-        $this->calls++;
-
-        return $callable(...array_values($params));
-    }
+    $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
+    return new InterceptingExecutor($container->get(CallableExecutorInterface::class));
 }
 
-describe('ContextHandler', function () {
-    it('delegates zero-argument callables to the executor', function () {
-        $executor = new ContextHandlerCountingExecutor();
-        $handler = new ContextHandler($executor);
+it('invokes a zero-argument callable from its public context', function (): void {
+    $context = new CallableContext(static fn (): string => 'ok');
 
-        $result = $handler->handle(new CallableContext(static fn (): string => 'ok'));
-
-        expect($result)->toBe('ok')
-            ->and($executor->calls)->toBe(1);
-    });
-
-    it('delegates callables with positional parameters to the executor', function () {
-        $executor = new ContextHandlerCountingExecutor();
-        $handler = new ContextHandler($executor);
-
-        $result = $handler->handle(new CallableContext(
-            static fn (string $left, string $right): string => "{$left}:{$right}",
-            [0 => 'left', 1 => 'right'],
-        ));
-
-        expect($result)->toBe('left:right')
-            ->and($executor->calls)->toBe(1);
-    });
-
-    it('keeps named parameter sets on the executor path', function () {
-        $executor = new ContextHandlerCountingExecutor();
-        $handler = new ContextHandler($executor);
-
-        $result = $handler->handle(new CallableContext(
-            static fn (string $left, string $right): string => "{$left}:{$right}",
-            ['left' => 'left', 'right' => 'right'],
-        ));
-
-        expect($result)->toBe('left:right')
-            ->and($executor->calls)->toBe(1);
-    });
+    expect(terminalInvocationPipeline()->handle($context))->toBe('ok');
 });
+
+it('passes positional arguments from the public context to the callable', function (): void {
+    $context = new CallableContext(
+        static fn (string $left, string $right): string => "{$left}:{$right}",
+        ['left', 'right'],
+    );
+
+    expect(terminalInvocationPipeline()->handle($context))->toBe('left:right');
+});
+
+it('preserves named argument binding and omitted PHP defaults through the terminal', function (array $arguments, string $expected): void {
+    $context = new CallableContext(
+        static fn (string $left = 'default', string $right = 'default'): string => "{$left}:{$right}",
+        $arguments,
+    );
+
+    expect(terminalInvocationPipeline()->handle($context))->toBe($expected);
+})->with([
+    'reverse key order' => [['right' => 'right', 'left' => 'left'], 'left:right'],
+    'omitted first parameter' => [['right' => 'right'], 'default:right'],
+]);

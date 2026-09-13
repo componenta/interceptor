@@ -18,6 +18,15 @@ use ReflectionFunctionAbstract;
  */
 final class CallableContext implements CallableContextInterface
 {
+    private function resolveReflector(): ReflectionFunctionAbstract
+    {
+        try {
+            return Reflection::callable($this->callable);
+        } catch (\InvalidArgumentException) {
+            // Native magic dispatch has no concrete method signature.
+            return new \ReflectionFunction(\Closure::fromCallable($this->callable));
+        }
+    }
     public const string SCOPE_ATTRIBUTE = 'interceptor.scope';
 
     /**
@@ -31,7 +40,7 @@ final class CallableContext implements CallableContextInterface
      * Lazily resolved on first access using {@see Reflection::callable()}.
      */
     public ReflectionFunctionAbstract $reflector {
-        get => $this->reflectorCache ??= Reflection::callable($this->callable);
+        get => $this->reflectorCache ??= $this->resolveReflector();
     }
 
     /**
@@ -51,8 +60,8 @@ final class CallableContext implements CallableContextInterface
      */
     public function __construct(
         callable $callable,
-        private(set) readonly array $parameters = [],
-        private(set) readonly array $attributes = [],
+        public private(set) readonly array $parameters = [],
+        public private(set) readonly array $attributes = [],
         ?ReflectionFunctionAbstract $reflector = null,
     ) {
         $this->callable = $callable;
@@ -98,7 +107,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function getAttribute(string $name, mixed $default = null): mixed
     {
-        return $this->attributes[$name] ?? $default;
+        return array_key_exists($name, $this->attributes) ? $this->attributes[$name] : $default;
     }
 
     /**
@@ -106,8 +115,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function withAttribute(string $name, mixed $value): CallableContextInterface
     {
-        $attributes = $this->attributes;
-        $attributes[$name] = $value;
+        $attributes = array_replace($this->attributes, [$name => $value]);
 
         $copy = new self($this->callable, $this->parameters, $attributes, $this->reflectorCache);
 
@@ -152,7 +160,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function getParameter(string|int $key, mixed $default = null): mixed
     {
-        return $this->parameters[$key] ?? $default;
+        return array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
     }
 
     /**
@@ -160,8 +168,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function withParameter(string|int $key, mixed $value): CallableContextInterface
     {
-        $parameters = $this->parameters;
-        $parameters[$key] = $value;
+        $parameters = array_replace($this->parameters, [$key => $value]);
 
         $copy = new self($this->callable, $parameters, $this->attributes, $this->reflectorCache);
 

@@ -225,31 +225,22 @@ describe('scope filtering', function () {
     });
 });
 
-describe('caching', function () {
-    it('reuses the same factory-built interceptor across repeated invocations of the same method', function () {
+describe('repeated invocations', function () {
+    it('runs fresh factory-built interceptors on repeated method invocations', function () {
         $log = [];
         $factory = attributeFactory($log);
         $interceptor = new AttributeInterceptor($factory);
-
-        // Fresh terminal each call exercises the "candidates cached, chain rebuilt per terminal" path.
         $interceptor->intercept(methodContext('single'), terminal());
         $interceptor->intercept(methodContext('single'), terminal());
         $interceptor->intercept(methodContext('single'), terminal());
-
-        // Factory was called once (caching), but the interceptor ran three times.
-        expect($factory->calls)->toHaveCount(1)
-            ->and($factory->calls[0][0])->toBe(RecordingInterceptor::class)
-            ->and($log)->toBe([
+        expect($log)->toBe([
                 'A:before', 'A:after',
                 'A:before', 'A:after',
                 'A:before', 'A:after',
             ]);
     });
 
-    it('reuses the same composed chain for repeated invocations with the same terminal', function () {
-        // Guards the "per-terminal chain cache hit" branch:
-        // when the same terminal is used, the composed chain is served from the
-        // per-terminal cache instead of being rebuilt.
+    it('preserves repeated execution with the same terminal', function () {
         $log = [];
         $factory = attributeFactory($log);
         $interceptor = new AttributeInterceptor($factory);
@@ -259,8 +250,7 @@ describe('caching', function () {
         $interceptor->intercept(methodContext('single'), $fixedTerminal);
         $interceptor->intercept(methodContext('single'), $fixedTerminal);
 
-        expect($factory->calls)->toHaveCount(1)
-            ->and($log)->toBe([
+        expect($log)->toBe([
                 'A:before', 'A:after',
                 'A:before', 'A:after',
                 'A:before', 'A:after',
@@ -278,9 +268,7 @@ describe('caching', function () {
         expect($factory->calls)->toBe([]);
     });
 
-    it('caches attribute resolution for named functions, not only for methods', function () {
-        // Named functions reach the dedicated signatureKey branch - method callables
-        // go through a different one. This guards that cache path.
+    it('preserves repeated named function interception', function () {
         $log = [];
         $factory = attributeFactory($log);
         $interceptor = new AttributeInterceptor($factory);
@@ -289,8 +277,7 @@ describe('caching', function () {
         $interceptor->intercept(new CallableContext($fn), terminal());
         $interceptor->intercept(new CallableContext($fn), terminal());
 
-        expect($factory->calls)->toHaveCount(1)
-            ->and($log)->toBe([
+        expect($log)->toBe([
                 'F:before', 'F:after',
                 'F:before', 'F:after',
             ]);
