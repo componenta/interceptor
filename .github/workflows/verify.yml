@@ -7,6 +7,11 @@ on:
       - 'refactor/**'
   pull_request:
   workflow_dispatch:
+    inputs:
+      audit:
+        description: Run full performance and coverage measurements
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,3 +35,16 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
       - run: composer bench:smoke
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      - name: Full performance measurement
+        if: ${{ success() && (inputs.audit == true || (github.event_name == 'push' && contains(github.event.head_commit.message, '[audit]'))) }}
+        run: composer bench
+      - name: Enable coverage driver after performance measurement
+        if: ${{ success() && (inputs.audit == true || (github.event_name == 'push' && contains(github.event.head_commit.message, '[audit]'))) }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+          tools: composer:v2
+      - name: Measure test coverage
+        if: ${{ success() && (inputs.audit == true || (github.event_name == 'push' && contains(github.event.head_commit.message, '[audit]'))) }}
+        run: composer test:coverage
