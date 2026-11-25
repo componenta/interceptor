@@ -140,9 +140,21 @@ final class ResolvedCallableContext implements CallableContextInterface
             unset($remaining[$name], $remaining[$position]);
         }
 
+        // Logical edits may add positional values after named variadic entries.
+        // Build the native vector with all positional values first.
+        $positionalTail = [];
+        $namedTail = [];
+        foreach ($remaining as $key => $value) {
+            if (is_int($key)) {
+                $positionalTail[] = $value;
+            } else {
+                $namedTail[$key] = $value;
+            }
+        }
+
         // Names preserve omitted fixed arguments instead of shifting their neighbours.
-        if (!array_any(array_keys($remaining), static fn (string|int $key): bool => is_int($key))) {
-            return [...$fixed, ...$remaining];
+        if ($positionalTail === []) {
+            return [...$fixed, ...$namedTail];
         }
 
         // PHP requires positional variadic arguments to precede named arguments.
@@ -163,7 +175,7 @@ final class ResolvedCallableContext implements CallableContextInterface
             }
         }
 
-        return [...$arguments, ...$remaining];
+        return [...$arguments, ...$positionalTail, ...$namedTail];
     }
 
     public function withCallable(callable $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface

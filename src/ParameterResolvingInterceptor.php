@@ -35,7 +35,7 @@ final readonly class ParameterResolvingInterceptor implements InterceptorInterfa
 
         if ($parameters !== []) {
             $resolved = $this->parametersResolver->resolve($parameters, $context->parameters);
-            $context = new ResolvedCallableContext($context->withParameters($resolved));
+            $context = new ResolvedCallableContext($context->withParameters($resolved), nativeArguments: true);
         }
 
         return $handler->handle($context);

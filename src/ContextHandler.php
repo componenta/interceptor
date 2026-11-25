@@ -54,9 +54,10 @@ final readonly class ContextHandler implements ContextHandlerInterface
             // DI resolves strings as service IDs before native callable names.
             // Preserve the native target selected by the resolver/context.
             // A method pair retains native magic dispatch and called-class semantics.
-            $callable = str_contains($callable, '::')
-                ? explode('::', $callable, 2)
-                : Closure::fromCallable($callable);
+            $separator = strrpos($callable, '::');
+            $callable = $separator === false
+                ? Closure::fromCallable($callable)
+                : [substr($callable, 0, $separator), substr($callable, $separator + 2)];
         }
 
         return $this->executor->call($callable, $context->parameters);

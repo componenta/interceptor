@@ -65,3 +65,14 @@ it('preserves named arguments and the called class in native magic static dispat
     expect($pipeline->handle(new CallableContext(InterceptorStaticChild::class . '::virtual', ['named' => 'value'])))
         ->toBe([InterceptorStaticChild::class, 'virtual', ['named' => 'value']]);
 });
+
+it('preserves a valid static callable whose class alias contains a double colon', function (): void {
+    $alias = 'InterceptorAlias::Nested';
+    class_alias(InterceptorStaticChild::class, $alias);
+
+    $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
+    $pipeline = new InterceptingExecutor($container->get(CallableExecutorInterface::class, CallableExecutorInterface::class));
+
+    expect($pipeline->handle(new CallableContext($alias . '::run', ['value' => 'chosen'])))
+        ->toBe(InterceptorStaticChild::class . ':chosen');
+});

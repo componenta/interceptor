@@ -497,3 +497,15 @@ it('keeps referenced input state isolated across repeated intercepted calls', fu
         ->and($value)->toBe('original')
         ->and($trace)->toBe('trace');
 })->with(['DI arguments' => [false], 'native prepared arguments' => [true]]);
+
+it('binds a positional variadic value added after named variadic arguments', function (): void {
+    $container = preparedInvocationContainer(CallbackInterceptorFactory::before(
+        static fn (CallableContextInterface $context): CallableContextInterface => $context->withParameter(1, 'tail'),
+    ));
+    $target = static fn (string $first, string ...$rest): array => [$first, $rest];
+    $prepared = new \Componenta\DI\PreparedCallable($target);
+
+    expect($container->get(PipelineInterface::class)->handle(
+        new CallableContext($prepared, ['first' => 'value', 'named' => 'last']),
+    ))->toBe(['value', ['tail', 'named' => 'last']]);
+});
