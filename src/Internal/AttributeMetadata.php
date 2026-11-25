@@ -40,26 +40,18 @@ final class AttributeMetadata
         $attributes = $reflector->getAttributes();
         $selected = [];
         foreach ($attributes as $attribute) {
-            if (self::supports($attribute)) {
-                $selected[] = $attribute;
-            } elseif (!self::isLoaded($attribute)) {
+            $name = $attribute->getName();
+            // Discover the declaration once. Two separate autoloading is_a()
+            // probes can load an Intercept subclass between the checks.
+            if (!class_exists($name) && !interface_exists($name, false) && !trait_exists($name, false)) {
                 $cacheable = false;
+                continue;
+            }
+            if (is_a($name, Intercept::class, true) || is_a($name, InterceptorInterface::class, true)) {
+                $selected[] = $attribute;
             }
         }
         return $selected;
     }
 
-    /** @param ReflectionAttribute<object> $attribute */
-    private static function isLoaded(ReflectionAttribute $attribute): bool
-    {
-        $name = $attribute->getName();
-        return class_exists($name, false) || interface_exists($name, false) || trait_exists($name, false);
-    }
-
-    /** @param ReflectionAttribute<object> $attribute */
-    private static function supports(ReflectionAttribute $attribute): bool
-    {
-        return is_a($attribute->getName(), Intercept::class, true)
-            || is_a($attribute->getName(), InterceptorInterface::class, true);
-    }
 }
