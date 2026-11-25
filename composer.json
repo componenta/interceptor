@@ -57,7 +57,10 @@
             "Composer\\Config::disableProcessTimeout",
             "@php vendor/bin/phpbench run --config=phpbench.json.dist --report=aggregate --report=env"
         ],
-        "bench:smoke": "@php vendor/bin/phpbench run --config=phpbench.json.dist --revs=1 --iterations=1 --report=aggregate",
+        "bench:smoke": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php benchmarks/smoke.php"
+        ],
         "analyse": "@php vendor/bin/phpstan analyse src --level=max",
         "test:coverage": "@php vendor/bin/pest --coverage"
     },

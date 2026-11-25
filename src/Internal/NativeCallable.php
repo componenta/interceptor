@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Componenta\Interceptor\Internal;
 
 use Closure;
-use LogicException;
 use TypeError;
 
 /** @internal Captures an invocable target without granting the library's private scope. */
@@ -33,8 +32,7 @@ final class NativeCallable
         // to private library methods.
         static $validate = null;
         if (!$validate instanceof Closure) {
-            $validate = Closure::bind(static fn (mixed $value): bool => is_callable($value), null, null)
-                ?? throw new LogicException('Unable to create a scope-neutral callable validator.');
+            $validate = Closure::bind(static fn (mixed $value): bool => is_callable($value), null, null);
         }
 
         return $validate($target) === true;
