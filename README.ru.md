@@ -165,7 +165,7 @@ final class RespondInterceptor implements InterceptorInterface, ScopedInterface
 Интегратор указывает текущий скоп, выставляя атрибут контекста до запуска пайплайна:
 
 ```php
-use Componenta\Interceptor\CallableContext;
+use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\Scope;
 
 $context = $context->withAttribute(CallableContextInterface::SCOPE_ATTRIBUTE, Scope::HTTP);
@@ -267,6 +267,7 @@ return [
 ```bash
 composer install
 composer test
+composer analyse
 composer bench:smoke
 composer bench
 ```

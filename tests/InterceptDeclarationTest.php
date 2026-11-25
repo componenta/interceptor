@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Componenta\Interceptor\Attribute\Intercept;
 use Componenta\Interceptor\AttributeInterceptor;
 use Componenta\Interceptor\CallableContext;
-use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\CallbackInterceptorFactory;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\Tests\Fixture\FactoryStub;
@@ -21,9 +20,13 @@ it('captures attribute constructor slots by value without cloning objects', func
     expect($attribute->params)->toBe(['value' => 'original', 'object' => $object]);
 });
 
-it('rejects an empty factory identifier at the declaration boundary', function (string $id): void {
-    expect(fn () => new Intercept($id))->toThrow(InvalidArgumentException::class);
-})->with(['', ' ']);
+it('rejects an empty factory identifier at the declaration boundary', function (): void {
+    expect(fn () => new Intercept(''))->toThrow(InvalidArgumentException::class);
+});
+
+it('preserves a non-empty opaque factory service identifier without normalization', function (): void {
+    expect((new Intercept(' service '))->interceptor)->toBe(' service ');
+});
 
 it('resolves an interceptor through an opaque factory service identifier', function (): void {
     $factory = new FactoryStub();

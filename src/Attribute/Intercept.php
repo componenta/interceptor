@@ -28,7 +28,7 @@ class Intercept
      */
     public function __construct(string $interceptor, array $params = [])
     {
-        if (trim($interceptor) === '') {
+        if ($interceptor === '') {
             throw new InvalidArgumentException('Interceptor factory entry must be non-empty.');
         }
 

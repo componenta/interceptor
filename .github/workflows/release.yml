@@ -25,17 +25,8 @@ jobs:
           tools: composer:v2
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
-      - name: Run package tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          if php -r '$c=json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); exit(isset($c["scripts"]["test"]) ? 0 : 1);'; then
-            composer test
-          elif [ -x vendor/bin/pest ]; then
-            vendor/bin/pest
-          elif [ -x vendor/bin/phpunit ]; then
-            vendor/bin/phpunit
-          fi
+      - run: composer test
+      - run: composer bench:smoke
 
   publish:
     if: startsWith(github.event.head_commit.message, 'Release v')

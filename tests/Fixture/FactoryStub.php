@@ -14,15 +14,15 @@ use RuntimeException;
  */
 final class FactoryStub implements FactoryInterface
 {
-    /** @var array<class-string, callable(array<string, mixed>): object> */
+    /** @var array<non-empty-string, callable(array<string, mixed>): object> */
     private array $producers = [];
 
-    /** @var array<int, array{class-string, array<string, mixed>}> */
+    /** @var array<int, array{non-empty-string, array<string, mixed>}> */
     public array $calls = [];
 
     /**
      * @template T of object
-     * @param class-string<T> $class
+     * @param non-empty-string $class
      * @param callable(array<string, mixed>): T $producer
      */
     public function bind(string $class, callable $producer): void
