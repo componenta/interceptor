@@ -15,8 +15,9 @@ use ReflectionFunctionAbstract;
  * - Arbitrary attributes for interceptor communication
  * - Reflection information for introspection
  *
- * Implementations must be immutable - all `with*` methods return
- * new instances with the modified state.
+ * Implementations must preserve the callable and the top-level parameter and
+ * attribute slots. All `with*` methods return new contexts. Objects and nested
+ * reference-bearing values are shared as supplied; this is not a deep freeze.
  */
 interface CallableContextInterface
 {
@@ -41,6 +42,8 @@ interface CallableContextInterface
      * Reflection of the callable for introspection.
      *
      * Provides access to parameter types, attributes, return type, etc.
+     * External changes to a returned reflector must not change the callable
+     * metadata observed through the context.
      */
     public ReflectionFunctionAbstract $reflector { get; }
 
@@ -71,15 +74,15 @@ interface CallableContextInterface
      *
      * @param string $name The attribute name.
      * @param mixed $value The attribute value.
-     * @return static A new context with the attribute set.
+     * @return CallableContextInterface A new context with the attribute set.
      */
-    public function withAttribute(string $name, mixed $value): CallableContextInterface ;
+    public function withAttribute(string $name, mixed $value): CallableContextInterface;
 
     /**
      * Creates a new context with the specified attribute removed.
      *
      * @param string $name The attribute name to remove.
-     * @return static A new context without the specified attribute.
+     * @return CallableContextInterface A new context without the specified attribute.
      */
     public function withoutAttribute(string $name): CallableContextInterface;
 
@@ -87,9 +90,9 @@ interface CallableContextInterface
      * Creates a new context with the given parameters, replacing all existing ones.
      *
      * @param array<string|int, mixed> $parameters The new parameters.
-     * @return static A new context with the specified parameters.
+     * @return CallableContextInterface A new context with the specified parameters.
      */
-    public function withParameters(array $parameters): CallableContextInterface ;
+    public function withParameters(array $parameters): CallableContextInterface;
 
     /**
      * Retrieves a parameter value by key.
@@ -105,17 +108,17 @@ interface CallableContextInterface
      *
      * @param string|int $key The parameter key (name or position).
      * @param mixed $value The parameter value.
-     * @return static A new context with the parameter set.
+     * @return CallableContextInterface A new context with the parameter set.
      */
-    public function withParameter(string|int $key, mixed $value): CallableContextInterface ;
+    public function withParameter(string|int $key, mixed $value): CallableContextInterface;
 
     /**
      * Creates a new context with the specified parameter removed.
      *
      * @param string|int $key The parameter key to remove.
-     * @return static A new context without the specified parameter.
+     * @return CallableContextInterface A new context without the specified parameter.
      */
-    public function withoutParameter(string|int $key): CallableContextInterface ;
+    public function withoutParameter(string|int $key): CallableContextInterface;
 
     /**
      * Creates a new context with a different callable.

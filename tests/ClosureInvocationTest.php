@@ -20,7 +20,6 @@ use Componenta\Interceptor\ContextHandlerInterface;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\InterceptorInterface;
 use Componenta\Interceptor\ParameterResolvingInterceptor;
-use ReflectionMethod;
 
 #[Attribute(Attribute::TARGET_FUNCTION | Attribute::TARGET_METHOD)]
 final readonly class Envelope implements InterceptorInterface
@@ -47,10 +46,10 @@ test('keeps interceptor attributes specific to each closure representation', fun
     $context = static fn (Closure $closure, string $value): CallableContext => new CallableContext(
         $representation === 'closure' ? $closure : [$closure, '__invoke'],
         ['value' => $value],
-        reflector: $representation === 'pre-reflected' ? new ReflectionMethod($closure, '__invoke') : null,
+
     );
 
     expect($pipeline->handle($context($first, 'A')))->toBe('first:A')
         ->and($pipeline->handle($context($second, 'B')))->toBe('second:B')
         ->and($pipeline->handle($context($first, 'C')))->toBe('first:C');
-})->with(['closure', 'method', 'pre-reflected']);
+})->with(['closure', 'method']);

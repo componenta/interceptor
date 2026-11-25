@@ -70,13 +70,15 @@ interface InterceptorInterface
 
 ### Context
 
-Immutable object carrying the callable, its parameters, arbitrary attributes, and a lazily-resolved reflector. Mutators return new instances:
+Immutable object carrying the callable, its parameters, arbitrary attributes, and a lazily-resolved reflector. Callable array slots and top-level argument/attribute slots are captured by value; objects and nested reference-bearing values are not deep-cloned. Mutators return new instances:
 
 ```php
 $context = $context
     ->withParameter('userId', 42)
     ->withAttribute('trace.id', $traceId);
 ```
+
+Reflection is derived from the callable; the constructor no longer accepts an external `reflector` argument. Remove that argument when migrating existing contexts.
 
 ### Pipeline
 

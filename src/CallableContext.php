@@ -7,7 +7,11 @@ namespace Componenta\Interceptor;
 use Componenta\Reflection\Reflection;
 use Componenta\Scope\ScopeInterface;
 use Componenta\Scope\ScopedInterface;
+use Closure;
+use InvalidArgumentException;
+use ReflectionFunction;
 use ReflectionFunctionAbstract;
+use TypeError;
 
 /**
  * Immutable implementation of {@see CallableContextInterface}.
@@ -18,15 +22,6 @@ use ReflectionFunctionAbstract;
  */
 final class CallableContext implements CallableContextInterface
 {
-    private function resolveReflector(): ReflectionFunctionAbstract
-    {
-        try {
-            return Reflection::callable($this->callable);
-        } catch (\InvalidArgumentException) {
-            // Native magic dispatch has no concrete method signature.
-            return new \ReflectionFunction(\Closure::fromCallable($this->callable));
-        }
-    }
     public const string SCOPE_ATTRIBUTE = 'interceptor.scope';
 
     /**
@@ -40,7 +35,7 @@ final class CallableContext implements CallableContextInterface
      * Lazily resolved on first access using {@see Reflection::callable()}.
      */
     public ReflectionFunctionAbstract $reflector {
-        get => $this->reflectorCache ??= $this->resolveReflector();
+        get => $this->resolveReflector();
     }
 
     /**
@@ -48,7 +43,13 @@ final class CallableContext implements CallableContextInterface
      *
      * @var callable
      */
-    private $callable;
+    private readonly mixed $callable;
+
+    /** @var array<string|int, mixed> */
+    public readonly array $parameters;
+
+    /** @var array<string, mixed> */
+    public readonly array $attributes;
 
     /**
      * Creates a new callable context.
@@ -56,16 +57,61 @@ final class CallableContext implements CallableContextInterface
      * @param callable $callable The callable to encapsulate.
      * @param array<string|int, mixed> $parameters Parameters for invocation.
      * @param array<string, mixed> $attributes Arbitrary attributes.
-     * @param ReflectionFunctionAbstract|null $reflector Pre-resolved callable reflector.
      */
     public function __construct(
-        callable $callable,
-        public private(set) readonly array $parameters = [],
-        public private(set) readonly array $attributes = [],
-        ?ReflectionFunctionAbstract $reflector = null,
+        callable|array $callable,
+        array $parameters = [],
+        array $attributes = [],
     ) {
+        // Snapshot array callables before native validation can invoke autoloaders.
+        if (is_array($callable)) {
+            $callable = self::snapshot($callable);
+            if (!is_callable($callable)) {
+                throw new TypeError('Expected a valid PHP callable.');
+            }
+        }
+
         $this->callable = $callable;
-        $this->reflectorCache = $reflector;
+        $this->parameters = self::snapshot($parameters);
+        $this->attributes = self::snapshot($attributes);
+    }
+
+    /**
+     * Detach top-level reference slots without changing keys or object identities.
+     *
+     * @template TKey of array-key
+     * @param array<TKey, mixed> $values
+     * @return array<TKey, mixed>
+     */
+    private static function snapshot(array $values): array
+    {
+        $snapshot = [];
+        foreach ($values as $key => $value) {
+            $snapshot[$key] = $value;
+        }
+        return $snapshot;
+    }
+
+    private function resolveReflector(): ReflectionFunctionAbstract
+    {
+        try {
+            // Reflection 3 provides guarded cached handles.
+            return $this->reflectorCache ??= Reflection::callable($this->callable);
+        } catch (InvalidArgumentException) {
+            // Magic dispatch has no concrete declaration. Never cache or share
+            // this mutable native fallback with callers or context copies.
+            return new ReflectionFunction(Closure::fromCallable($this->callable));
+        }
+    }
+
+    /** @param array<string|int, mixed> $parameters
+     *  @param array<string, mixed> $attributes
+     */
+    private function copy(array $parameters, array $attributes): self
+    {
+        $copy = new self($this->callable, $parameters, $attributes);
+        $copy->reflectorCache = $this->reflectorCache;
+        return $copy;
     }
 
     /**
@@ -117,7 +163,7 @@ final class CallableContext implements CallableContextInterface
     {
         $attributes = array_replace($this->attributes, [$name => $value]);
 
-        $copy = new self($this->callable, $this->parameters, $attributes, $this->reflectorCache);
+        $copy = $this->copy($this->parameters, $attributes);
 
         return $copy;
     }
@@ -130,7 +176,7 @@ final class CallableContext implements CallableContextInterface
         $attributes = $this->attributes;
         unset($attributes[$name]);
 
-        $copy = new self($this->callable, $this->parameters, $attributes, $this->reflectorCache);
+        $copy = $this->copy($this->parameters, $attributes);
 
         return $copy;
     }
@@ -140,7 +186,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function withAttributes(array $attributes): CallableContextInterface
     {
-        $copy = new self($this->callable, $this->parameters, $attributes, $this->reflectorCache);
+        $copy = $this->copy($this->parameters, $attributes);
 
         return $copy;
     }
@@ -150,7 +196,7 @@ final class CallableContext implements CallableContextInterface
      */
     public function withParameters(array $parameters): CallableContextInterface
     {
-        $copy = new self($this->callable, $parameters, $this->attributes, $this->reflectorCache);
+        $copy = $this->copy($parameters, $this->attributes);
 
         return $copy;
     }
@@ -170,7 +216,7 @@ final class CallableContext implements CallableContextInterface
     {
         $parameters = array_replace($this->parameters, [$key => $value]);
 
-        $copy = new self($this->callable, $parameters, $this->attributes, $this->reflectorCache);
+        $copy = $this->copy($parameters, $this->attributes);
 
         return $copy;
     }
@@ -183,7 +229,7 @@ final class CallableContext implements CallableContextInterface
         $parameters = $this->parameters;
         unset($parameters[$key]);
 
-        $copy = new self($this->callable, $parameters, $this->attributes, $this->reflectorCache);
+        $copy = $this->copy($parameters, $this->attributes);
 
         return $copy;
     }

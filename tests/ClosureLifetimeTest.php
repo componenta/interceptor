@@ -22,10 +22,10 @@ it('releases objects captured by intercepted closures after invocation', functio
     $callable = static fn (): string => $value->message;
     $context = new CallableContext(
         $representation === 'closure' ? $callable : [$callable, '__invoke'],
-        reflector: $representation === 'pre-reflected' ? new ReflectionMethod($callable, '__invoke') : null,
+
     );
     expect($pipeline->handle($context))->toBe('value');
     unset($value, $callable, $context);
     gc_collect_cycles();
     expect($reference->get())->toBeNull();
-})->with(['closure', 'method', 'pre-reflected']);
+})->with(['closure', 'method']);
