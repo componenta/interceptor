@@ -18,14 +18,11 @@ final readonly class HttpInterceptorPipelineFactory
 {
     public function __invoke(ContainerValue $container): PipelineInterface
     {
-        $pipeline = new InterceptingExecutor(
-            $container->get(CallableExecutorInterface::class, CallableExecutorInterface::class),
-            new ParameterResolvingInterceptor($container->get(ParametersResolver::class, ParametersResolver::class)),
-        );
         $interceptors = $container->config->get(ConfigKey::HTTP_INTERCEPTORS, []);
-        if (!is_array($interceptors)) {
-            throw new RuntimeException(sprintf('Config key "%s" must contain a list of interceptor service ids.', ConfigKey::HTTP_INTERCEPTORS));
+        if (!is_array($interceptors) || !array_is_list($interceptors)) {
+            throw new RuntimeException(sprintf('Config key "%s" must contain a list of interceptor service ids or instances.', ConfigKey::HTTP_INTERCEPTORS));
         }
+        $resolved = [];
         foreach ($interceptors as $interceptor) {
             if (is_string($interceptor)) {
                 $interceptor = $container->get($interceptor);
@@ -37,8 +34,12 @@ final readonly class HttpInterceptorPipelineFactory
                     get_debug_type($interceptor),
                 ));
             }
-            $pipeline = $pipeline->pipe($interceptor);
+            $resolved[] = $interceptor;
         }
-        return $pipeline;
+        return new InterceptingExecutor(
+            $container->get(CallableExecutorInterface::class, CallableExecutorInterface::class),
+            new ParameterResolvingInterceptor($container->get(ParametersResolver::class, ParametersResolver::class)),
+            ...$resolved,
+        );
     }
 }

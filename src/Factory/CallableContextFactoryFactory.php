@@ -7,10 +7,11 @@ namespace Componenta\Interceptor\Factory;
 use Componenta\Config\ContainerValue;
 use Componenta\DI\CallableResolverInterface;
 use Componenta\Interceptor\CallableContextFactory;
+use Componenta\Interceptor\CallableContextFactoryInterface;
 
 final readonly class CallableContextFactoryFactory
 {
-    public function __invoke(ContainerValue $container): CallableContextFactory
+    public function __invoke(ContainerValue $container): CallableContextFactoryInterface
     {
         return new CallableContextFactory($container->get(CallableResolverInterface::class, CallableResolverInterface::class));
     }

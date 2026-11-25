@@ -242,7 +242,7 @@ Register the module's `ConfigProvider` in your application:
 new \Componenta\Interceptor\ConfigProvider();
 ```
 
-It binds `CallableContextFactory`, `AttributeInterceptor`, and `PipelineInterface`. The `PipelineInterface` service is intended for HTTP route handler execution and is built by `HttpInterceptorPipelineFactory`:
+It binds `CallableContextFactoryInterface`, `AttributeInterceptor`, and `PipelineInterface`. `PipelineInterface` extends DI's `CallableExecutorInterface` and the interception and context-handler contracts. The `PipelineInterface` service is intended for HTTP route handler execution and is built by `HttpInterceptorPipelineFactory`:
 
 1. `ParameterResolvingInterceptor` is always registered first, so callable parameters are resolved through DI before application interceptors run.
 2. Additional interceptors are read from `ConfigKey::HTTP_INTERCEPTORS`.

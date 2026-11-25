@@ -27,7 +27,7 @@ composer require componenta/interceptor
 |---|---|
 | `componenta/di` | Выполняет callable и разрешает недостающие параметры перед запуском цепочки перехватчиков. |
 | `componenta/reflection` | Лениво получает рефлексию callable, чтобы атрибутные перехватчики могли читать метод и его атрибуты. |
-| `componenta/config` | Регистрирует `CallableContextFactory`, `AttributeInterceptor` и связанные сервисы. |
+| `componenta/config` | Регистрирует `CallableContextFactoryInterface`, `AttributeInterceptor` и связанные сервисы. |
 | `componenta/serialize-interceptor` | Готовый перехватчик сериализации результата через Symfony Serializer. |
 | `componenta/http-respond-interceptor` | Готовый HTTP-перехватчик, который превращает результат в PSR-7 ответ. |
 | `componenta/http-paginate-interceptor` | Готовый HTTP-перехватчик для `PaginatorInterface` -> `ResourcePaginator`. |
@@ -242,7 +242,7 @@ new InterceptingExecutor(
 new \Componenta\Interceptor\ConfigProvider();
 ```
 
-Он регистрирует `CallableContextFactory`, `AttributeInterceptor` и `PipelineInterface`. Сервис `PipelineInterface` предназначен для выполнения HTTP-обработчиков маршрутов и создается через `HttpInterceptorPipelineFactory`:
+Он регистрирует `CallableContextFactoryInterface`, `AttributeInterceptor` и `PipelineInterface`. Сервис `PipelineInterface` предназначен для выполнения HTTP-обработчиков маршрутов и создается через `HttpInterceptorPipelineFactory`:
 
 1. `ParameterResolvingInterceptor` всегда регистрируется первым, поэтому параметры callable разрешаются через DI до запуска прикладных перехватчиков.
 2. Дополнительные перехватчики берутся из `ConfigKey::HTTP_INTERCEPTORS`.

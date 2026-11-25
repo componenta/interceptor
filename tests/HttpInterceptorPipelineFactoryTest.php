@@ -38,3 +38,23 @@ it('resolves callable parameters before configured HTTP interceptors execute', f
 it('reports malformed interceptor configuration before executing a callable', function (): void {
     expect(fn () => httpFactoryContainer('wrong')->get(PipelineInterface::class))->toThrow(\Componenta\DI\Exception\ResolutionException::class, ConfigKey::HTTP_INTERCEPTORS);
 });
+
+it('builds configured interceptors once in list order and exposes the callable contract', function (): void {
+    $outer = \Componenta\Interceptor\CallbackInterceptorFactory::after(static fn (string $value): string => 'outer:' . $value);
+    $inner = \Componenta\Interceptor\CallbackInterceptorFactory::after(static fn (string $value): string => 'inner:' . $value);
+    $container = httpFactoryContainer([$outer, $inner]);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $factory = $container->get(\Componenta\Interceptor\CallableContextFactoryInterface::class, \Componenta\Interceptor\CallableContextFactoryInterface::class);
+
+    expect($pipeline)->toBeInstanceOf(\Componenta\DI\CallableExecutorInterface::class)
+        ->and($pipeline->call(static fn (): string => 'value'))->toBe('outer:inner:value')
+        ->and($pipeline->handle($factory->createContext(static fn (): string => 'next')))->toBe('outer:inner:next');
+});
+
+it('rejects associative and sparse interceptor configuration', function (array $interceptors): void {
+    expect(fn () => httpFactoryContainer($interceptors)->get(PipelineInterface::class))
+        ->toThrow(\Componenta\DI\Exception\ResolutionException::class, ConfigKey::HTTP_INTERCEPTORS);
+})->with([
+    'associative' => [['outer' => HttpFactoryInterceptor::class]],
+    'sparse' => [[2 => HttpFactoryInterceptor::class]],
+]);

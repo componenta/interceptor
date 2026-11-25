@@ -33,11 +33,11 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      * @param mixed $callable The callable or its representation.
      * @param array<string|int, mixed> $params Parameters for invocation.
      * @param array<string, mixed> $attributes Arbitrary attributes.
-     * @return CallableContext The created context.
+     * @return CallableContextInterface The created context.
      *
      * @throws Throwable If the callable cannot be resolved.
      */
-    public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContext
+    public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContextInterface
     {
         $params = ArraySlots::snapshot($params);
         $attributes = ArraySlots::snapshot($attributes);

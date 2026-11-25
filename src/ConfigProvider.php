@@ -13,16 +13,9 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
     protected function getFactories(): array
     {
         return [
-            CallableContextFactory::class => CallableContextFactoryFactory::class,
+            CallableContextFactoryInterface::class => CallableContextFactoryFactory::class,
             AttributeInterceptor::class => AttributeInterceptorFactory::class,
             PipelineInterface::class => HttpInterceptorPipelineFactory::class,
-        ];
-    }
-
-    protected function getAliases(): array
-    {
-        return [
-            CallableContextFactoryInterface::class => CallableContextFactory::class,
         ];
     }
 }
