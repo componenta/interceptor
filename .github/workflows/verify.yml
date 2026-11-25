@@ -1,6 +1,10 @@
 name: Verify
 
 on:
+  push:
+    branches:
+      - main
+      - 'refactor/**'
   pull_request:
   workflow_dispatch:
 
@@ -19,5 +23,10 @@ jobs:
           tools: composer:v2
       - run: composer validate --strict
       - run: composer install --no-interaction --prefer-dist
+        id: install
       - run: composer test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      - run: composer analyse
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
       - run: composer bench:smoke
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
