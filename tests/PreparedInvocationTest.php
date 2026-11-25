@@ -614,7 +614,9 @@ it('adds a missing fixed argument by name or declaration position in a prepared 
 
 it('preserves inherited variadic values when a prepared target is replaced by a DI-resolved target', function (array $arguments, bool $logical, array $expected): void {
     $original = static fn (string $first = 'original-default', string ...$rest): array => [$first, $rest];
-    $replacement = static fn (#[InvocationSuffix] string $first = 'replacement-default', string ...$rest): array => [$first, $rest];
+    $replacement = $logical
+        ? static fn (string $first = 'replacement-default', string ...$rest): array => [$first, $rest]
+        : static fn (#[InvocationSuffix] string $first = 'replacement-default', string ...$rest): array => [$first, $rest];
     $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
     $context = new CallableContext(new \Componenta\DI\PreparedCallable($original), $arguments);
     if ($logical) {
@@ -640,7 +642,7 @@ it('preserves inherited variadic values when a prepared target is replaced by a 
     'logical omitted fixed argument' => [
         ['value', 'tail', 'named' => 'last'],
         true,
-        ['replacement-default!', ['tail', 'named' => 'last']],
+        ['replacement-default', ['tail', 'named' => 'last']],
     ],
     'positional control' => [
         ['value', 'tail'],
