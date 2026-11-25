@@ -9,6 +9,7 @@ use Componenta\DI\Exception\ExceptionInterface;
 use Componenta\DI\Exception\InvalidCallableException;
 use Componenta\Interceptor\Internal\ArraySlots;
 use Componenta\Interceptor\Internal\InterceptorHandler;
+use Componenta\Interceptor\Internal\NativeCallable;
 use Throwable;
 
 /**
@@ -72,7 +73,7 @@ final class InterceptingExecutor implements PipelineInterface
             $callable = ArraySlots::snapshot($callable);
         }
         try {
-            return $this->executor->resolve($callable);
+            return NativeCallable::capture($this->executor->resolve($callable));
         } catch (ExceptionInterface $error) {
             throw $error;
         } catch (Throwable $error) {
