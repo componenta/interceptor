@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableResolverInterface;
+use Componenta\DI\Exception\ExceptionInterface;
+use Componenta\DI\Exception\InvalidCallableException;
 use Componenta\Interceptor\Internal\ArraySlots;
 use Throwable;
 
@@ -35,7 +37,7 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      * @param array<string, mixed> $attributes Arbitrary attributes.
      * @return CallableContextInterface The created context.
      *
-     * @throws Throwable If the callable cannot be resolved.
+     * @throws ExceptionInterface If the callable cannot be resolved or captured.
      */
     public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContextInterface
     {
@@ -44,10 +46,16 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
         }
         $params = ArraySlots::snapshot($params);
         $attributes = ArraySlots::snapshot($attributes);
-        return new CallableContext(
-            $this->resolver->resolve($callable),
-            $params,
-            $attributes,
-        );
+        try {
+            return new CallableContext(
+                $this->resolver->resolve($callable),
+                $params,
+                $attributes,
+            );
+        } catch (ExceptionInterface $error) {
+            throw $error;
+        } catch (Throwable $error) {
+            throw InvalidCallableException::forValue($callable, $error);
+        }
     }
 }

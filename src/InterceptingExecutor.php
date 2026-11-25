@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
+use Componenta\DI\Exception\ExceptionInterface;
+use Componenta\DI\Exception\InvalidCallableException;
 use Componenta\Interceptor\Internal\ArraySlots;
 use Componenta\Interceptor\Internal\InterceptorHandler;
 use Throwable;
@@ -32,7 +34,8 @@ final class InterceptingExecutor implements PipelineInterface
     /** @var list<InterceptorInterface> */
     private array $interceptors;
 
-    private readonly ContextHandler $contextHandler;
+    private readonly ContextHandlerInterface $contextHandler;
+    private readonly CallableContextFactoryInterface $contextFactory;
 
     /**
      * Lazily composed terminal-rooted handler chain.
@@ -49,6 +52,7 @@ final class InterceptingExecutor implements PipelineInterface
     ) {
         $this->interceptors = array_values($interceptors);
         $this->contextHandler = new ContextHandler($executor);
+        $this->contextFactory = new CallableContextFactory($executor);
     }
 
     /**
@@ -56,22 +60,24 @@ final class InterceptingExecutor implements PipelineInterface
      */
     public function call(mixed $callable, array $params = []): mixed
     {
-        $params = ArraySlots::snapshot($params);
-        return $this->handle(new CallableContext(
-            $this->resolve($callable),
-            $params,
-        ));
+        return $this->handle($this->contextFactory->createContext($callable, $params));
     }
 
     /**
-     * @throws Throwable
+     * @throws ExceptionInterface
      */
     public function resolve(mixed $callable): callable
     {
         if (is_array($callable)) {
             $callable = ArraySlots::snapshot($callable);
         }
-        return $this->executor->resolve($callable);
+        try {
+            return $this->executor->resolve($callable);
+        } catch (ExceptionInterface $error) {
+            throw $error;
+        } catch (Throwable $error) {
+            throw InvalidCallableException::forValue($callable, $error);
+        }
     }
 
     /**

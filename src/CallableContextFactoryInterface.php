@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\DI\Exception\ExceptionInterface;
+
 /**
  * Factory for creating {@see CallableContextInterface} instances.
  *
@@ -20,6 +22,7 @@ interface CallableContextFactoryInterface
      * @param array<string|int, mixed> $params Parameters for the callable invocation.
      * @param array<string, mixed> $attributes Arbitrary attributes for the context.
      * @return CallableContextInterface The created context.
+     * @throws ExceptionInterface If the callable cannot be resolved or captured.
      */
     public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContextInterface;
 }

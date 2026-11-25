@@ -207,3 +207,82 @@ it('keeps invocation contexts separate during recursive use of the same pipeline
     expect($pipeline->call($outer, ['label' => 'outer']))->toBe('outer:inner:inner:outer')
         ->and($pipeline->call($inner, ['label' => 'next']))->toBe('next:next');
 });
+
+
+final class ScopedInvocationResolver implements \Componenta\DI\CallableExecutorInterface
+{
+    private function hidden(): string
+    {
+        return 'hidden';
+    }
+
+    public function resolve(mixed $callable): callable
+    {
+        return match ($callable) {
+            'hidden' => [$this, 'hidden'],
+            'granted' => $this->hidden(...),
+            default => $callable,
+        };
+    }
+
+    public function call(mixed $callable, array $params = []): mixed
+    {
+        return $callable(...$params);
+    }
+}
+
+it('normalizes a resolver result that cannot be invoked outside its declaring scope', function (string $entry): void {
+    $resolver = new ScopedInvocationResolver();
+    $pipeline = new InterceptingExecutor($resolver);
+    $factory = new \Componenta\Interceptor\CallableContextFactory($resolver);
+    $caught = null;
+
+    try {
+        match ($entry) {
+            'resolve' => $pipeline->resolve('hidden'),
+            'call' => $pipeline->call('hidden'),
+            'factory' => $factory->createContext('hidden'),
+        };
+    } catch (\Componenta\DI\Exception\InvalidCallableException $error) {
+        $caught = $error;
+    }
+
+    expect($caught)->toBeInstanceOf(\Componenta\DI\Exception\InvalidCallableException::class)
+        ->and($caught?->getPrevious())->toBeInstanceOf(TypeError::class);
+})->with(['resolve', 'call', 'factory']);
+
+it('honors a private method capability explicitly exported as a closure by its owner', function (): void {
+    $pipeline = new InterceptingExecutor(new ScopedInvocationResolver());
+
+    expect($pipeline->call('granted'))->toBe('hidden')
+        ->and(($pipeline->resolve('granted'))())->toBe('hidden');
+});
+
+it('preserves an existing DI exception during callable resolution', function (string $entry): void {
+    $failure = new \Componenta\DI\Exception\ResolutionException('resolution failed');
+    $resolver = new class($failure) implements \Componenta\DI\CallableExecutorInterface {
+        public function __construct(private Throwable $failure) {}
+        public function resolve(mixed $callable): callable
+        {
+            throw $this->failure;
+        }
+        public function call(mixed $callable, array $params = []): never
+        {
+            throw new LogicException('Unexpected invocation.');
+        }
+    };
+    $pipeline = new InterceptingExecutor($resolver);
+    $factory = new \Componenta\Interceptor\CallableContextFactory($resolver);
+    $caught = null;
+    try {
+        match ($entry) {
+            'resolve' => $pipeline->resolve('service'),
+            'call' => $pipeline->call('service'),
+            'factory' => $factory->createContext('service'),
+        };
+    } catch (\Componenta\DI\Exception\ResolutionException $error) {
+        $caught = $error;
+    }
+
+    expect($caught)->toBe($failure);
+})->with(['resolve', 'call', 'factory']);
