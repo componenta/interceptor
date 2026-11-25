@@ -238,3 +238,38 @@ it('rejects invalid before results before calling the downstream handler', funct
 
     expect($called)->toBeFalse()->and($afterCalled)->toBeFalse();
 })->with(['before', 'around']);
+
+
+it('uses the original context when a before callback reassigns its local input and returns null', function (string $kind): void {
+    $before = static function (CallableContextInterface &$context): null {
+        $context = $context->withCallable(static fn (): string => 'replacement')
+            ->withAttribute('trace', 'replacement');
+        return null;
+    };
+    $original = new CallableContext(static fn (): string => 'original', attributes: ['trace' => 'original']);
+    $after = static fn (string $result, CallableContextInterface $context): string => $result . ':' . $context->getAttribute('trace');
+    $interceptor = $kind === 'before'
+        ? CallbackInterceptorFactory::before($before)
+        : CallbackInterceptorFactory::around($before, $after);
+    $seen = null;
+    $handler = new class($seen) implements ContextHandlerInterface {
+        public function __construct(private mixed &$seen) {}
+        public function handle(CallableContextInterface $context): mixed
+        {
+            $this->seen = $context;
+            return ($context->getCallable())();
+        }
+    };
+
+    expect($interceptor->intercept($original, $handler))->toBe($kind === 'before' ? 'original' : 'original:original')
+        ->and($seen)->toBe($original);
+})->with(['before', 'around']);
+
+it('honors an explicitly returned context even when the before callback reassigns its input', function (): void {
+    $before = static function (CallableContextInterface &$context): CallableContextInterface {
+        $context = $context->withCallable(static fn (): string => 'replacement');
+        return $context;
+    };
+
+    expect(runWith(CallbackInterceptorFactory::before($before), static fn (): string => 'original'))->toBe('replacement');
+});
