@@ -199,3 +199,32 @@ it('captures a callable specification before a pluggable resolver executes exter
     expect($result)->toBe('first')
         ->and($owner)->toBeInstanceOf(OwnershipSecondTarget::class);
 })->with(['factory', 'resolve', 'call']);
+
+
+it('captures the returned callable route rather than exposing reference slots owned by a resolver', function (string $entry): void {
+    $owner = new OwnershipFirstTarget();
+    $method = 'run';
+    $resolver = new class([&$owner, &$method]) implements \Componenta\DI\CallableExecutorInterface {
+        public function __construct(private array $target) {}
+
+        public function resolve(mixed $callable): callable
+        {
+            return $this->target;
+        }
+
+        public function call(mixed $callable, array $params = []): mixed
+        {
+            return $callable(...$params);
+        }
+    };
+    $pipeline = new \Componenta\Interceptor\InterceptingExecutor($resolver);
+    $resolved = match ($entry) {
+        'resolve' => $pipeline->resolve('service'),
+        'factory' => (new \Componenta\Interceptor\CallableContextFactory($resolver))->createContext('service')->getCallable(),
+    };
+
+    $owner = new OwnershipSecondTarget();
+
+    expect($resolved())->toBe('first')
+        ->and($owner->run())->toBe('second');
+})->with(['resolve', 'factory']);

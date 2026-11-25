@@ -76,3 +76,19 @@ it('removes only the requested supplied parameter without changing the original 
         ->and($edited->getParameter('first', 'absent'))->toBe('absent')
         ->and($context->parameters)->toBe(['first' => 'one', 1 => 'two']);
 });
+
+
+it('preserves PHP-normalized attribute names and caller-owned scope slots when creating a scoped context', function (): void {
+    $scope = Scope::CONSOLE;
+    $marker = 'original';
+    $context = CallableContext::scoped(
+        Scope::HTTP,
+        static fn (): null => null,
+        attributes: ['42' => &$marker, CallableContext::SCOPE_ATTRIBUTE => &$scope],
+    );
+    $marker = 'changed';
+
+    expect($context->getAttribute('42'))->toBe('original')
+        ->and($context->attributes)->toBe([42 => 'original', CallableContext::SCOPE_ATTRIBUTE => Scope::HTTP])
+        ->and($scope)->toBe(Scope::CONSOLE);
+});
