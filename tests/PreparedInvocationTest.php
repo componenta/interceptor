@@ -559,3 +559,19 @@ it('keeps native duplicate-argument errors before logical edits', function (): v
     expect(fn () => $container->get(PipelineInterface::class)->handle($context))->toThrow(Error::class)
         ->and($container->get(PipelineInterface::class)->handle($context->withParameter('value', 'edited')))->toBe('edited');
 });
+
+it('honors an alternative callable context implementation throughout preparation and interception', function (bool $prepared): void {
+    $container = preparedInvocationContainer();
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class)
+        ->pipe($container->get(\Componenta\Interceptor\AttributeInterceptor::class));
+    $original = new \Componenta\Interceptor\Tests\Fixture\DelegatingContext(
+        new CallableContext([new PreparedInvocationTarget(), 'run'], ['value' => 'input']),
+    );
+    $context = $prepared ? $original->withPreparedParameters(['value' => 'ready']) : $original;
+    $expected = $prepared ? 'ready:ready' : 'input!:input!';
+
+    expect($pipeline->handle($context))->toBe($expected)
+        ->and($pipeline->handle($context))->toBe($expected)
+        ->and($original->prepared)->toBeFalse()
+        ->and($original->parameters)->toBe(['value' => 'input']);
+})->with(['requires DI preparation' => [false], 'already prepared' => [true]]);
