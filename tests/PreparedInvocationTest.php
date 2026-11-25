@@ -534,3 +534,28 @@ it('lets a context explicitly mark a complete invocation vector as prepared', fu
         ->and($container->get(PipelineInterface::class)->handle($original))->toBe('input!')
         ->and($container->get(PipelineInterface::class)->handle($prepared))->toBe('ready');
 });
+
+it('exposes only the effective fixed argument after editing duplicate logical aliases', function (string|int $key): void {
+    $container = preparedInvocationContainer(CallbackInterceptorFactory::around(
+        static fn (CallableContextInterface $context): CallableContextInterface =>
+            $context->withParameters([0 => 'stale', 'value' => 'selected'])->withParameter($key, 'changed'),
+        static fn (string $result, CallableContextInterface $context): array => [
+            $result,
+            $context->parameters,
+            $context->getParameter(0),
+            $context->getParameter('value'),
+        ],
+    ));
+
+    expect($container->get(PipelineInterface::class)->call(static fn (string $value = 'default'): string => $value))
+        ->toBe(['changed', ['value' => 'changed'], 'changed', 'changed']);
+})->with(['name' => ['value'], 'position' => [0]]);
+
+it('keeps native duplicate-argument errors before logical edits', function (): void {
+    $container = preparedInvocationContainer();
+    $target = new \Componenta\DI\PreparedCallable(static fn (string $value): string => $value);
+    $context = new CallableContext($target, [0 => 'positional', 'value' => 'named']);
+
+    expect(fn () => $container->get(PipelineInterface::class)->handle($context))->toThrow(Error::class)
+        ->and($container->get(PipelineInterface::class)->handle($context->withParameter('value', 'edited')))->toBe('edited');
+});

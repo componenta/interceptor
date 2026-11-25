@@ -12,6 +12,27 @@ final class ArgumentBinding
 {
     private function __construct() {}
 
+    /**
+     * Keep a single logical slot for each fixed argument. As in DI input
+     * binding, an explicit name takes precedence over its positional alias.
+     * Native vectors are not normalized until a logical edit is requested.
+     *
+     * @param array<string|int, mixed> $arguments
+     * @return array<string|int, mixed>
+     */
+    public static function logical(?ReflectionFunctionAbstract $reflector, array $arguments): array
+    {
+        foreach ($reflector?->getParameters() ?? [] as $parameter) {
+            if ($parameter->isVariadic()) {
+                break;
+            }
+            if (array_key_exists($parameter->getName(), $arguments)) {
+                unset($arguments[$parameter->getPosition()]);
+            }
+        }
+        return $arguments;
+    }
+
     /** @param array<string|int, mixed> $arguments */
     public static function key(?ReflectionFunctionAbstract $reflector, array $arguments, string|int $key): string|int
     {

@@ -149,6 +149,7 @@ final class CallableContext implements CallableContextInterface
         $copy = clone $this;
         $copy->argumentSlots = ArraySlots::snapshot($parameters);
         if ($copy->prepared) {
+            $copy->argumentSlots = ArgumentBinding::logical($this->reflector, $copy->argumentSlots);
             $copy->mode = ArgumentMode::Logical;
         }
         return $copy;
@@ -166,6 +167,7 @@ final class CallableContext implements CallableContextInterface
         $copy = clone $this;
         $copy->argumentSlots[$key] = $value;
         if ($copy->prepared) {
+            $copy->argumentSlots = ArgumentBinding::logical($this->reflector, $copy->argumentSlots);
             $copy->mode = ArgumentMode::Logical;
         }
         return $copy;
@@ -175,7 +177,11 @@ final class CallableContext implements CallableContextInterface
     {
         $copy = clone $this;
         if ($copy->prepared) {
-            $copy->argumentSlots = ArgumentBinding::remove($this->reflector, $this->argumentSlots, $key);
+            $reflector = $this->reflector;
+            $copy->argumentSlots = ArgumentBinding::logical(
+                $reflector,
+                ArgumentBinding::remove($reflector, $this->argumentSlots, $key),
+            );
             $copy->mode = ArgumentMode::Logical;
         } else {
             unset($copy->argumentSlots[$key]);

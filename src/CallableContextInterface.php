@@ -117,7 +117,8 @@ interface CallableContextInterface
     /**
      * Creates a new context with the given parameters, replacing all existing ones.
      * Prepared contexts retain preparation and interpret fixed argument keys as
-     * declaration names or positions; unprepared contexts retain DI input keys.
+     * declaration names or positions; a name takes precedence over a duplicate
+     * positional alias, which is removed. Unprepared contexts retain DI input keys.
      *
      * @param array<string|int, mixed> $parameters The new parameters.
      * @return CallableContextInterface A new context with the specified parameters.
