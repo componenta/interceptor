@@ -58,7 +58,7 @@ final class InterceptingExecutor implements PipelineInterface
     {
         $params = ArraySlots::snapshot($params);
         return $this->handle(new CallableContext(
-            $this->executor->resolve($callable),
+            $this->resolve($callable),
             $params,
         ));
     }
@@ -68,6 +68,9 @@ final class InterceptingExecutor implements PipelineInterface
      */
     public function resolve(mixed $callable): callable
     {
+        if (is_array($callable)) {
+            $callable = ArraySlots::snapshot($callable);
+        }
         return $this->executor->resolve($callable);
     }
 

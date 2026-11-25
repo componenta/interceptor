@@ -39,6 +39,9 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      */
     public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContextInterface
     {
+        if (is_array($callable)) {
+            $callable = ArraySlots::snapshot($callable);
+        }
         $params = ArraySlots::snapshot($params);
         $attributes = ArraySlots::snapshot($attributes);
         return new CallableContext(

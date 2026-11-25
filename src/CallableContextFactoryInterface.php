@@ -14,6 +14,7 @@ interface CallableContextFactoryInterface
 {
     /**
      * Creates a callable context from the given callable representation.
+     * Top-level input slots are captured before callable resolution begins.
      *
      * @param mixed $callable The callable or its representation to resolve and wrap.
      * @param array<string|int, mixed> $params Parameters for the callable invocation.

@@ -166,3 +166,36 @@ it('preserves invocation argument slots when a resolver mutates caller-owned ref
     expect($pipeline->call($target, ['value' => &$value]))->toBe('original')
         ->and($value)->toBe('external');
 });
+
+it('captures a callable specification before a pluggable resolver executes external code', function (string $entry): void {
+    $owner = new OwnershipFirstTarget();
+    $method = 'run';
+    $specification = [&$owner, &$method];
+    $resolver = new class(static function () use (&$owner, &$method): void {
+        $owner = new OwnershipSecondTarget();
+        $method = 'run';
+    }) implements \Componenta\DI\CallableExecutorInterface {
+        public function __construct(private Closure $discover) {}
+
+        public function resolve(mixed $callable): callable
+        {
+            ($this->discover)();
+            return $callable;
+        }
+
+        public function call(mixed $callable, array $params = []): mixed
+        {
+            return $callable(...$params);
+        }
+    };
+
+    $pipeline = new \Componenta\Interceptor\InterceptingExecutor($resolver);
+    $result = match ($entry) {
+        'factory' => ((new \Componenta\Interceptor\CallableContextFactory($resolver))->createContext($specification)->getCallable())(),
+        'resolve' => ($pipeline->resolve($specification))(),
+        'call' => $pipeline->call($specification),
+    };
+
+    expect($result)->toBe('first')
+        ->and($owner)->toBeInstanceOf(OwnershipSecondTarget::class);
+})->with(['factory', 'resolve', 'call']);
