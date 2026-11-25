@@ -150,9 +150,13 @@ final class CallbackInterceptorFactory
             }
         );
     }
+
     private static function applyBefore(callable $callback, CallableContextInterface $context): CallableContextInterface
     {
-        $modified = $callback($context);
+        // Only the callback's return value may replace the current context.
+        // A callback accepting its argument by reference can reassign its local slot.
+        $input = $context;
+        $modified = $callback($input);
         if ($modified === null) {
             return $context;
         }
