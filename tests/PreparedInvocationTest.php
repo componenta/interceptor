@@ -597,3 +597,16 @@ it('inherits logical prepared argument positions when replacing the target with 
         ->and($pipeline->handle($edited))->toBe(['default', 'kept'])
         ->and($pipeline->handle($context))->toBe(['removed', 'kept']);
 })->with(['direct', 'interceptor']);
+
+
+it('adds a missing fixed argument by name or declaration position in a prepared context', function (string|int $key): void {
+    $target = static fn (string $first = 'default', string $second = 'other'): array => [$first, $second];
+    $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
+    $context = new CallableContext(new \Componenta\DI\PreparedCallable($target), ['second' => 'kept']);
+    $edited = $context->withParameter($key, 'added');
+
+    expect($edited->getParameter('first'))->toBe('added')
+        ->and($edited->getParameter(0))->toBe('added')
+        ->and($pipeline->handle($edited))->toBe(['added', 'kept'])
+        ->and($pipeline->handle($context))->toBe(['default', 'kept']);
+})->with(['name' => ['first'], 'position' => [0]]);

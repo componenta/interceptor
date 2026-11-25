@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Componenta\Interceptor\AttributeInterceptor;
 use Componenta\Interceptor\CallableContext;
 use Componenta\Interceptor\ContextHandler;
+use Componenta\Interceptor\InterceptorInterface;
 use Componenta\Interceptor\Scope;
 use Componenta\Interceptor\Tests\Fixture\FactoryStub;
 use Componenta\Interceptor\Tests\Fixture\PassThroughExecutor;
@@ -294,4 +295,34 @@ it('rejects an invalid explicit scope before any interceptor or target executes'
     ]), terminal()))->toThrow(InvalidArgumentException::class)
         ->and($factory->calls)->toBe([])
         ->and($log)->toBe([]);
+});
+
+
+it('rejects a factory result outside the interceptor contract and recovers on the next invocation', function (): void {
+    $log = [];
+    $factory = new FactoryStub();
+    $factory->bind(RecordingInterceptor::class, static fn (): object => new stdClass());
+    $interceptor = new AttributeInterceptor($factory);
+    $context = methodContext('single');
+
+    expect(fn () => $interceptor->intercept($context, terminal()))
+        ->toThrow(UnexpectedValueException::class, InterceptorInterface::class);
+
+    $factory->bind(RecordingInterceptor::class, static function (array $params) use (&$log): RecordingInterceptor {
+        return new RecordingInterceptor($params['name'], $log);
+    });
+
+    expect($interceptor->intercept($context, terminal()))->toBe('single')
+        ->and($log)->toBe(['A:before', 'A:after'])
+        ->and($factory->calls)->toHaveCount(2);
+});
+
+it('does not construct a factory interceptor excluded by its attribute scope', function (): void {
+    $factory = new FactoryStub();
+    $interceptor = new AttributeInterceptor($factory);
+
+    expect($interceptor->intercept(methodContext('attributeScopedHttp', [
+        CallableContext::SCOPE_ATTRIBUTE => Scope::CONSOLE,
+    ]), terminal()))->toBe('attr-scoped')
+        ->and($factory->calls)->toBe([]);
 });

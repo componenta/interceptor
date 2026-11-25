@@ -232,7 +232,7 @@ Declarations whose attribute classes are not yet available are rechecked on late
 
 Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` retain their normal application-defined lifetime. Native attribute instances and their constructed arguments are fresh. Factory-created interceptor lifetime is determined by the factory, not by the metadata cache. Closures are not retained in the metadata cache.
 
-Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability when the declaration is reached. Replace a target before `AttributeInterceptor` if the new target's attribute chain should be selected.
+Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability when the declaration is reached. The attribute chain and execution scope are selected at entry to `AttributeInterceptor`. Replace a target or scope before that interceptor if its selection should change. Subsequent trusted interceptors can modify the invocation context, but the selected attribute chain is not re-discovered. Do not use post-selection target replacement as an authorization mechanism.
 
 
 ## Container Wiring

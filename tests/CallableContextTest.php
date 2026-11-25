@@ -62,3 +62,17 @@ it('replaces a referenced parameter without changing the source or its aliases',
         ->and($context->parameters)->toBe([$key => 'original', 'alias' => 'original', 2 => $marker])
         ->and($value)->toBe('original');
 })->with(['named key' => ['value'], 'integer key' => [5], 'numeric string key' => ['5']]);
+
+
+it('removes only the requested supplied parameter without changing the original context', function (): void {
+    $context = new CallableContext(
+        static fn (string $first, string $second): array => [$first, $second],
+        ['first' => 'one', 1 => 'two'],
+    );
+    $edited = $context->withoutParameter('first');
+
+    expect($edited->prepared)->toBeFalse()
+        ->and($edited->parameters)->toBe([1 => 'two'])
+        ->and($edited->getParameter('first', 'absent'))->toBe('absent')
+        ->and($context->parameters)->toBe(['first' => 'one', 1 => 'two']);
+});

@@ -58,3 +58,15 @@ it('rejects associative and sparse interceptor configuration', function (array $
     'associative' => [['outer' => HttpFactoryInterceptor::class]],
     'sparse' => [[2 => HttpFactoryInterceptor::class]],
 ]);
+
+
+it('rejects a configured item that does not implement the interceptor contract', function (mixed $entry): void {
+    $container = httpFactoryContainer([$entry]);
+
+    expect(fn () => $container->get(PipelineInterface::class))
+        ->toThrow(\Componenta\DI\Exception\ResolutionException::class, InterceptorInterface::class);
+})->with([
+    'object' => [new stdClass()],
+    'integer' => [42],
+    'non-interceptor service' => [HttpFactoryDependency::class],
+]);
