@@ -160,6 +160,8 @@ interface CallableContextInterface
      * Replaces the target and resets argument preparation. A DI PreparedCallable
      * explicitly marks the replacement parameters as already prepared.
      * If parameters or attributes are null, they are inherited from the current context.
+     * A prepared replacement preserves inherited logical argument slots; explicitly
+     * supplied replacement arguments are treated as a native argument vector.
      *
      * @warning Inheriting parameters when the callable changes may pass arguments
      *          incompatible with the new callable's signature. Pass an explicit empty

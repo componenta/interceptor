@@ -196,10 +196,20 @@ final class CallableContext implements CallableContextInterface
 
     public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): self
     {
-        return new self(
+        $copy = new self(
             $callable,
             $parameters ?? $this->argumentSlots,
             $attributes ?? $this->attributeSlots,
         );
+
+        // Inherited logical slots describe declaration positions, not a
+        // native vector. Reindexing them would move arguments into omitted
+        // fixed parameters of the replacement callable.
+        if ($parameters === null && $this->mode === ArgumentMode::Logical && $copy->prepared) {
+            $copy->argumentSlots = ArgumentBinding::logical($copy->reflector, $this->argumentSlots);
+            $copy->mode = ArgumentMode::Logical;
+        }
+
+        return $copy;
     }
 }

@@ -579,7 +579,7 @@ it('honors an alternative callable context implementation throughout preparation
 
 it('inherits logical prepared argument positions when replacing the target with a prepared callable', function (string $entry): void {
     $original = static fn (string $left = 'default', string $right = 'original'): array => [$left, $right];
-    $replacement = static fn (string $left = 'default', string $right = 'original'): array => ['replacement', $left, $right];
+    $replacement = static fn (string $left = 'new-default', string $right = 'original'): array => ['replacement', $left, $right];
     $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
     $context = new CallableContext(new \Componenta\DI\PreparedCallable($original), ['removed', 'kept']);
     $edited = $context->withoutParameter(0);
@@ -592,7 +592,8 @@ it('inherits logical prepared argument positions when replacing the target with 
         ))->handle($context),
     };
 
-    expect($result)->toBe(['replacement', 'default', 'kept'])
+    expect($result)->toBe(['replacement', 'new-default', 'kept'])
+        ->and($pipeline->handle($edited->withCallable(new \Componenta\DI\PreparedCallable($replacement), ['explicit'])))->toBe(['replacement', 'explicit', 'original'])
         ->and($pipeline->handle($edited))->toBe(['default', 'kept'])
         ->and($pipeline->handle($context))->toBe(['removed', 'kept']);
 })->with(['direct', 'interceptor']);
