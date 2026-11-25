@@ -178,9 +178,9 @@ final class ResolvedCallableContext implements CallableContextInterface
         return [...$arguments, ...$positionalTail, ...$namedTail];
     }
 
-    public function withCallable(callable $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface
+    public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface
     {
         // A replacement callable has its own parameter and attribute contract.
-        return $this->context->withCallable($callable, $parameters, $attributes);
+        return $this->context->withCallable(NativeCallable::capture($callable), $parameters, $attributes);
     }
 }

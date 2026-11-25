@@ -46,7 +46,6 @@ test('keeps interceptor attributes specific to each closure representation', fun
     $context = static fn (Closure $closure, string $value): CallableContext => new CallableContext(
         $representation === 'closure' ? $closure : [$closure, '__invoke'],
         ['value' => $value],
-
     );
 
     expect($pipeline->handle($context($first, 'A')))->toBe('first:A')

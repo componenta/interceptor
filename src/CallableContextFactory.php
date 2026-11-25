@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableResolverInterface;
+use Componenta\Interceptor\Internal\ArraySlots;
 use Throwable;
 
 /**
@@ -38,6 +39,8 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      */
     public function createContext(mixed $callable, array $params = [], array $attributes = []): CallableContext
     {
+        $params = ArraySlots::snapshot($params);
+        $attributes = ArraySlots::snapshot($attributes);
         return new CallableContext(
             $this->resolver->resolve($callable),
             $params,

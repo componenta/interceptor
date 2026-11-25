@@ -6,6 +6,7 @@ namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
 use Componenta\DI\PreparedCallable;
+use Componenta\Interceptor\Internal\ArraySlots;
 use Componenta\Interceptor\Internal\ResolvedCallableContext;
 use Throwable;
 
@@ -56,6 +57,7 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
      */
     public function call(mixed $callable, array $params = []): mixed
     {
+        $params = ArraySlots::snapshot($params);
         return $this->handle(new CallableContext(
             $this->executor->resolve($callable),
             $params,

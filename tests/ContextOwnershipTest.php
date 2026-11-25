@@ -96,3 +96,75 @@ it('does not retain mutable fallback reflectors for magic dispatch', function ()
     expect($context->reflector->getName())->toBe('virtual')
         ->and(($context->getCallable())())->toBe('virtual');
 });
+
+final class OwnershipAutoloadTarget
+{
+    public static function run(string $value): string
+    {
+        return $value;
+    }
+}
+
+it('captures arguments and attributes before callable validation runs application autoloaders', function (): void {
+    $name = 'OwnershipPending_' . bin2hex(random_bytes(5));
+    $owner = $name;
+    $argument = 'original';
+    $trace = 'trace';
+    $loader = static function (string $class) use ($name, &$owner, &$argument, &$trace): void {
+        if ($class === $name) {
+            class_alias(OwnershipAutoloadTarget::class, $class);
+            $owner = OwnershipSecondTarget::class;
+            $argument = 'external';
+            $trace = 'external';
+        }
+    };
+    spl_autoload_register($loader);
+    try {
+        $context = new CallableContext([&$owner, 'run'], ['value' => &$argument], ['trace' => &$trace]);
+
+        expect(($context->getCallable())($context->getParameter('value')))->toBe('original')
+            ->and($context->getAttribute('trace'))->toBe('trace')
+            ->and($owner)->toBe(OwnershipSecondTarget::class)
+            ->and($argument)->toBe('external');
+    } finally {
+        spl_autoload_unregister($loader);
+    }
+});
+
+it('does not grant access to private implementation methods via native callable specifications', function (bool $array): void {
+    $target = $array ? [CallableContext::class, 'resolveReflector'] : CallableContext::class . '::resolveReflector';
+
+    expect(fn () => new CallableContext($target))->toThrow(TypeError::class);
+})->with([false, true]);
+
+it('preserves invocation argument slots when a resolver mutates caller-owned references', function (): void {
+    $value = 'original';
+    $trace = 'trace';
+    $resolver = new class(static function () use (&$value, &$trace): void {
+        $value = 'external';
+        $trace = 'external';
+    }) implements \Componenta\DI\CallableExecutorInterface {
+        public function __construct(private Closure $mutate) {}
+
+        public function resolve(mixed $callable): callable
+        {
+            ($this->mutate)();
+            return $callable;
+        }
+
+        public function call(mixed $callable, array $params = []): mixed
+        {
+            return $callable(...$params);
+        }
+    };
+    $target = static fn (string $value): string => $value;
+    $factory = new \Componenta\Interceptor\CallableContextFactory($resolver);
+    $context = $factory->createContext($target, ['value' => &$value], ['trace' => &$trace]);
+    expect($context->getParameter('value'))->toBe('original')
+        ->and($context->getAttribute('trace'))->toBe('trace');
+
+    $value = 'original';
+    $pipeline = new \Componenta\Interceptor\InterceptingExecutor($resolver);
+    expect($pipeline->call($target, ['value' => &$value]))->toBe('original')
+        ->and($value)->toBe('external');
+});

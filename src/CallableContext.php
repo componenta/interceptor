@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\Interceptor\Internal\ArraySlots;
+use Componenta\Interceptor\Internal\NativeCallable;
 use Componenta\Reflection\Reflection;
 use Componenta\Scope\ScopeInterface;
 use Componenta\Scope\ScopedInterface;
@@ -11,7 +13,6 @@ use Closure;
 use InvalidArgumentException;
 use ReflectionFunction;
 use ReflectionFunctionAbstract;
-use TypeError;
 
 /**
  * Immutable implementation of {@see CallableContextInterface}.
@@ -59,37 +60,14 @@ final class CallableContext implements CallableContextInterface
      * @param array<string, mixed> $attributes Arbitrary attributes.
      */
     public function __construct(
-        callable|array $callable,
+        callable|string|array $callable,
         array $parameters = [],
         array $attributes = [],
     ) {
-        // Snapshot array callables before native validation can invoke autoloaders.
-        if (is_array($callable)) {
-            $callable = self::snapshot($callable);
-            if (!is_callable($callable)) {
-                throw new TypeError('Expected a valid PHP callable.');
-            }
-        }
-
-        $this->callable = $callable;
-        $this->parameters = self::snapshot($parameters);
-        $this->attributes = self::snapshot($attributes);
-    }
-
-    /**
-     * Detach top-level reference slots without changing keys or object identities.
-     *
-     * @template TKey of array-key
-     * @param array<TKey, mixed> $values
-     * @return array<TKey, mixed>
-     */
-    private static function snapshot(array $values): array
-    {
-        $snapshot = [];
-        foreach ($values as $key => $value) {
-            $snapshot[$key] = $value;
-        }
-        return $snapshot;
+        // Snapshot the public data before target validation can run application autoloaders.
+        $this->parameters = ArraySlots::snapshot($parameters);
+        $this->attributes = ArraySlots::snapshot($attributes);
+        $this->callable = NativeCallable::capture($callable);
     }
 
     private function resolveReflector(): ReflectionFunctionAbstract
@@ -129,7 +107,7 @@ final class CallableContext implements CallableContextInterface
      */
     public static function scoped(
         ScopeInterface $scope,
-        callable $callable,
+        callable|string|array $callable,
         array $parameters = [],
         array $attributes = [],
     ): self {
@@ -237,7 +215,7 @@ final class CallableContext implements CallableContextInterface
     /**
      * @inheritDoc
      */
-    public function withCallable(callable $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface
+    public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface
     {
         return new self(
             $callable,

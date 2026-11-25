@@ -22,7 +22,6 @@ it('releases objects captured by intercepted closures after invocation', functio
     $callable = static fn (): string => $value->message;
     $context = new CallableContext(
         $representation === 'closure' ? $callable : [$callable, '__invoke'],
-
     );
     expect($pipeline->handle($context))->toBe('value');
     unset($value, $callable, $context);
