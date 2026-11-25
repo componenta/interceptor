@@ -105,57 +105,45 @@ final class NativeAttributeTarget
         return 'value';
     }
 }
-function nativeAttributePipeline(array $map): InterceptingExecutor
+function nativeAttributePipeline(): InterceptingExecutor
 {
     $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
     return new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
-        new AttributeInterceptor($container->get(FactoryInterface::class), $map),
+        new AttributeInterceptor($container->get(FactoryInterface::class)),
     );
 }
-it('preserves fresh factory and nested attribute argument state with source or prepared metadata', function (bool $prepared, string $method): void {
-    $pipeline = nativeAttributePipeline($prepared ? [NativeAttributeTarget::class . '::' . $method => [0]] : []);
+it('preserves fresh factory and nested attribute argument state on repeated calls', function (string $method): void {
+    $pipeline = nativeAttributePipeline();
     expect($pipeline->call([new NativeAttributeTarget(), $method]))->toBe('1:value')
         ->and($pipeline->call([new NativeAttributeTarget(), $method]))->toBe('1:value');
-})->with([false, true])->with(['factory', 'nested']);
+})->with(['factory', 'nested']);
 
-it('retains native attribute target and repeatability errors with prepared metadata', function (bool $prepared, string $method): void {
-    $pipeline = nativeAttributePipeline($prepared ? [NativeAttributeTarget::class . '::' . $method => $method === 'repeated' ? [0,1] : [0]] : []);
+it('retains native attribute target and repeatability errors', function (string $method): void {
+    $pipeline = nativeAttributePipeline();
     expect(fn () => $pipeline->call([new NativeAttributeTarget(), $method]))->toThrow(Error::class);
-})->with([false, true])->with(['wrongTarget', 'repeated']);
+})->with(['wrongTarget', 'repeated']);
 
-it('does not retry a failing attribute constructor when metadata is prepared', function (): void {
+it('does not retry a failing attribute constructor', function (): void {
     ThrowingNativeAttribute::$constructions = 0;
-    $pipeline = nativeAttributePipeline([NativeAttributeTarget::class . '::failure' => [0]]);
+    $pipeline = nativeAttributePipeline();
     expect(fn () => $pipeline->call([new NativeAttributeTarget(), 'failure']))
         ->toThrow(RuntimeException::class, 'native constructor failed');
     expect(ThrowingNativeAttribute::$constructions)->toBe(1);
 });
 
-it('falls back from malformed or out of range prepared metadata before materialization', function (array $map): void {
-    $pipeline = nativeAttributePipeline($map);
-    expect($pipeline->call([new NativeAttributeTarget(), 'factory']))->toBe('1:value');
-})->with([
-    'bad shape' => [[NativeAttributeTarget::class . '::factory' => ['wrong']]],
-    'missing position' => [[NativeAttributeTarget::class . '::factory' => [50]]],
-]);
-
-it('never allows a stale or incomplete positional map to suppress source interceptors', function (array $positions): void {
-    $pipeline = nativeAttributePipeline([NativeAttributeTarget::class . '::policies' => $positions]);
+it('preserves every declared policy in declaration order on cold and warm calls', function (): void {
+    $pipeline = nativeAttributePipeline();
     $target = new NativeAttributeTarget();
 
     expect($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value')
         ->and($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value');
-})->with([
-    'stale negative entry' => [[]],
-    'only first attribute' => [[0]],
-    'only last attribute' => [[1]],
-    'complete entry' => [[0, 1]],
-    'out of range' => [[50]],
-]);
+});
 
-it('preserves native attribute errors even when a stale map is empty', function (string $method): void {
-    $pipeline = nativeAttributePipeline([NativeAttributeTarget::class . '::' . $method => []]);
+it('retains declaration errors on subsequent attempts', function (string $method): void {
+    $pipeline = nativeAttributePipeline();
+    $target = new NativeAttributeTarget();
 
-    expect(fn () => $pipeline->call([new NativeAttributeTarget(), $method]))->toThrow(Error::class);
+    expect(fn () => $pipeline->call([$target, $method]))->toThrow(Error::class);
+    expect(fn () => $pipeline->call([$target, $method]))->toThrow(Error::class);
 })->with(['wrongTarget', 'repeated']);

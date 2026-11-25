@@ -30,20 +30,6 @@ final class AttributeMetadata
         };
     }
 
-    /** @return list<int>|null Null when an attribute class is not yet available. */
-    public static function positions(ReflectionFunctionAbstract $reflector): ?array
-    {
-        $positions = [];
-        foreach ($reflector->getAttributes() as $position => $attribute) {
-            if (self::supports($attribute)) {
-                $positions[] = $position;
-            } elseif (!self::isLoaded($attribute)) {
-                return null;
-            }
-        }
-        return $positions;
-    }
-
     /**
      * @param bool $cacheable False when an unavailable attribute class may become an interceptor later.
      * @return list<ReflectionAttribute<object>>
@@ -61,27 +47,6 @@ final class AttributeMetadata
             }
         }
         return $selected;
-    }
-
-    /** @phpstan-assert-if-true array<string, list<int>> $map */
-    public static function validMap(mixed $map): bool
-    {
-        if (!is_array($map)) {
-            return false;
-        }
-        foreach ($map as $signature => $positions) {
-            if (!is_string($signature) || trim($signature) === '' || !is_array($positions) || !array_is_list($positions)) {
-                return false;
-            }
-            $previous = -1;
-            foreach ($positions as $position) {
-                if (!is_int($position) || $position <= $previous) {
-                    return false;
-                }
-                $previous = $position;
-            }
-        }
-        return true;
     }
 
     /** @param ReflectionAttribute<object> $attribute */

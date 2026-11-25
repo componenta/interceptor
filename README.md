@@ -28,7 +28,6 @@ composer require componenta/interceptor
 | `componenta/di` | Invokes callables and resolves missing parameters before interceptors run. |
 | `componenta/reflection` | Reads callable reflection and method attributes lazily. |
 | `componenta/config` | Registers context factories and attribute interceptors. |
-| `componenta/interceptor-app` | Application integration; the legacy positional artifact is not required for execution. |
 | `componenta/serialize-interceptor` | Ready-made result serialization interceptor backed by Symfony Serializer. |
 | `componenta/http-respond-interceptor` | Ready-made HTTP interceptor that wraps results into PSR-7 responses. |
 | `componenta/http-paginate-interceptor` | Ready-made HTTP interceptor for `PaginatorInterface` -> `ResourcePaginator`. |
@@ -232,9 +231,8 @@ Declarations whose attribute classes are not yet available are rechecked on late
 
 Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` retain their normal application-defined lifetime. Native attribute instances and their constructed arguments are fresh. Factory-created interceptor lifetime is determined by the factory, not by the metadata cache. Closures are not retained in the metadata cache.
 
-Native source declarations are authoritative. The legacy positional `attributeMap` constructor argument is accepted for migration but ignored: a stale map must never omit an authorization or other interceptor. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability.
+Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability.
 
-This version uses DI 6, Reflection 3 and Config 3. The old `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` keys and descriptor-array constructor argument are removed. The older positional build artifact is no longer consumed by this component. The old weak-terminal chain cache is removed.
 
 ## Container Wiring
 

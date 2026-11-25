@@ -21,13 +21,8 @@ final class AttributeInterceptor implements InterceptorInterface
 {
     /** @var array<string, list<ReflectionAttribute<object>>> */
     private array $attributes = [];
-    /**
-     * @param array<string, list<int>> $attributeMap Legacy build hint, accepted for migration only.
-     *        Source declarations are authoritative; positional maps cannot prove completeness.
-     */
     public function __construct(
         private readonly FactoryInterface $factory,
-        array $attributeMap = [],
     ) {
     }
 
