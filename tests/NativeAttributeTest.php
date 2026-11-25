@@ -147,3 +147,48 @@ it('retains declaration errors on subsequent attempts', function (string $method
     expect(fn () => $pipeline->call([$target, $method]))->toThrow(Error::class);
     expect(fn () => $pipeline->call([$target, $method]))->toThrow(Error::class);
 })->with(['wrongTarget', 'repeated']);
+
+#[Attribute(Attribute::TARGET_METHOD)]
+final class NativeDeny implements InterceptorInterface
+{
+    public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
+    {
+        return 'denied';
+    }
+}
+
+final class NativeForbiddenTarget
+{
+    #[NativeDeny]
+    #[ThrowingNativeAttribute]
+    public function direct(): never
+    {
+        throw new LogicException('The target must not be reached.');
+    }
+
+    #[NativeDeny]
+    #[Intercept(FactoryStateInterceptor::class)]
+    public function factory(): never
+    {
+        throw new LogicException('The target must not be reached.');
+    }
+}
+
+it('does not construct native attributes after an outer attribute short-circuits', function (): void {
+    ThrowingNativeAttribute::$constructions = 0;
+    $pipeline = nativeAttributePipeline();
+
+    expect($pipeline->call([new NativeForbiddenTarget(), 'direct']))->toBe('denied')
+        ->and(ThrowingNativeAttribute::$constructions)->toBe(0);
+});
+
+it('does not invoke the factory for an attribute that is not reached', function (): void {
+    $factory = new \Componenta\Interceptor\Tests\Fixture\FactoryStub();
+    $pipeline = new InterceptingExecutor(
+        new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
+        new AttributeInterceptor($factory),
+    );
+
+    expect($pipeline->call([new NativeForbiddenTarget(), 'factory']))->toBe('denied')
+        ->and($factory->calls)->toBe([]);
+});

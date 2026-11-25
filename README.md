@@ -120,7 +120,7 @@ final class UserController
 }
 ```
 
-Resolution is driven by `AttributeInterceptor` (register it once in your pipeline). The interceptor instance is built via `FactoryInterface` with the declared `params`. Attributes are read as layers wrapped around the method, **from outside in** — the topmost attribute is the outermost layer (enters first, returns last), the bottommost attribute is closest to the method body.
+Resolution is driven by `AttributeInterceptor` (register it once in your pipeline). The interceptor instance is built via `FactoryInterface` with the declared `params` when its layer is reached. Short-circuiting skips the construction and execution of inner layers. Attributes are read as layers wrapped around the method, **from outside in** — the topmost attribute is the outermost layer (enters first, returns last), the bottommost attribute is closest to the method body.
 
 Put authorization before any cache that can short-circuit it. Put entry-side interceptors (authorization, rate limits, caching gates) above result-side ones (response formatting, serialization, pagination). The method's return value flows outward through the inner layers first, so a serializer placed below a response wrapper gets the raw value and passes the serialized string up to the wrapper:
 
@@ -172,7 +172,7 @@ use Componenta\Interceptor\Scope;
 $context = $context->withAttribute(CallableContext::SCOPE_ATTRIBUTE, Scope::HTTP);
 ```
 
-Attribute-level scope takes priority over instance-level scope and is checked before resolving the interceptor's dependencies. Interceptors without either `ScopedInterface` always match.
+Attribute-level scope takes priority over instance-level scope and is checked before resolving the interceptor's dependencies. Interceptors without either `ScopedInterface` always match. An absent or null scope disables scope filtering; another value that does not implement `ScopeInterface` is rejected.
 
 Built-in scopes: `HTTP`, `CONSOLE`, `GRPC`, `QUEUE`, `WEBSOCKET`. Custom scopes can be represented by `Componenta\Scope\ScopeName` or by a package-specific enum implementing `Componenta\Scope\ScopeInterface`.
 
@@ -225,13 +225,13 @@ Prepared arguments and top-level context slots are passed by value; by-reference
 
 ## Caching
 
-`AttributeInterceptor` caches native `ReflectionAttribute` metadata for stable method and function signatures. Every invocation constructs fresh attribute arguments and attributes via `ReflectionAttribute::newInstance()`, then calls `FactoryInterface::make()` for `Intercept` declarations. Scope selection uses the attribute and the instance returned by the factory. The factory contract may reuse instances.
+`AttributeInterceptor` caches native `ReflectionAttribute` metadata for stable method and function signatures. Every reached layer constructs fresh attribute arguments and attributes via `ReflectionAttribute::newInstance()`, then calls `FactoryInterface::make()` for `Intercept` declarations. Scope selection uses the attribute and the instance returned by the factory. The factory contract may reuse instances.
 
 Declarations whose attribute classes are not yet available are rechecked on later invocations; incomplete classification is not retained in the metadata cache.
 
 Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` retain their normal application-defined lifetime. Native attribute instances and their constructed arguments are fresh. Factory-created interceptor lifetime is determined by the factory, not by the metadata cache. Closures are not retained in the metadata cache.
 
-Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability.
+Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability when the declaration is reached. Replace a target before `AttributeInterceptor` if the new target's attribute chain should be selected.
 
 
 ## Container Wiring

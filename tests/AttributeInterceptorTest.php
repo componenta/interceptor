@@ -283,3 +283,15 @@ describe('repeated invocations', function () {
             ]);
     });
 });
+
+it('rejects an invalid explicit scope before any interceptor or target executes', function (): void {
+    $log = [];
+    $factory = attributeFactory($log);
+    $interceptor = new AttributeInterceptor($factory);
+
+    expect(fn () => $interceptor->intercept(methodContext('attributeScopedHttp', [
+        CallableContext::SCOPE_ATTRIBUTE => 'http',
+    ]), terminal()))->toThrow(InvalidArgumentException::class)
+        ->and($factory->calls)->toBe([])
+        ->and($log)->toBe([]);
+});
