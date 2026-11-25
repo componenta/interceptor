@@ -187,3 +187,34 @@ it('captures both callbacks of an around interceptor independently of caller ref
 
     expect(runWith($interceptor, static fn (): string => 'value'))->toBe('first:first:value');
 });
+
+final class DeferredBeforeCallback
+{
+    public static function prepare(CallableContextInterface $context): CallableContextInterface
+    {
+        return $context->withAttribute('owner', 'prepared');
+    }
+}
+
+it('captures the after callback before discovery of the before callback can change its receiver', function (): void {
+    $pending = 'InterceptorPendingCallback_' . bin2hex(random_bytes(5));
+    $owner = new CapturedCallbackTarget('original');
+    $loader = static function (string $class) use ($pending, &$owner): void {
+        if ($class === $pending) {
+            class_alias(DeferredBeforeCallback::class, $class);
+            $owner = new CapturedCallbackTarget('replacement');
+        }
+    };
+
+    spl_autoload_register($loader);
+    try {
+        $interceptor = CallbackInterceptorFactory::around(
+            [$pending, 'prepare'],
+            [&$owner, 'after'],
+        );
+
+        expect(runWith($interceptor, static fn (): string => 'value'))->toBe('original:prepared:value');
+    } finally {
+        spl_autoload_unregister($loader);
+    }
+});

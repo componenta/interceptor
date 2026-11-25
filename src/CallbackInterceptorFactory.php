@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\Interceptor\Internal\ArraySlots;
 use Componenta\Interceptor\Internal\CallbackInterceptor;
 use Componenta\Interceptor\Internal\NativeCallable;
 
@@ -135,6 +136,11 @@ final class CallbackInterceptorFactory
      */
     public static function around(callable|string|array $before, callable|string|array $after): InterceptorInterface
     {
+        // Capture both callback specifications before validating either one.
+        // Validating the first may execute an application autoloader.
+        if (is_array($after)) {
+            $after = ArraySlots::snapshot($after);
+        }
         $before = NativeCallable::capture($before);
         $after = NativeCallable::capture($after);
         return new CallbackInterceptor(
