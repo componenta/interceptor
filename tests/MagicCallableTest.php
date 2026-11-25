@@ -78,3 +78,24 @@ it('preserves logical magic arguments when replacing the target with an ordinary
     expect($pipeline->handle($replacement))->toBe(['replacement', ['first', 'named' => 'last']])
         ->and($pipeline->handle($edited))->toBe(['original', ['first', 'named' => 'last']]);
 });
+
+
+it('retains the native binding behavior of an untouched magic vector after target replacement', function (array $arguments, ?array $expected): void {
+    $composition = (new ConfigFactory())->create(new Environment([]), new ConfigProvider());
+    $container = (new ContainerFactory())->create($composition->config, $composition->dependencies);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $target = new MagicInterceptionTarget();
+    $context = new \Componenta\Interceptor\CallableContext(
+        new \Componenta\DI\PreparedCallable([$target, 'original']),
+        $arguments,
+    );
+    $replacement = $context->withCallable([$target, 'replacement']);
+    if ($expected === null) {
+        expect(fn () => $pipeline->handle($replacement))->toThrow(Error::class);
+    } else {
+        expect($pipeline->handle($replacement))->toBe(['replacement', $expected]);
+    }
+})->with([
+    'native valid order' => [['first', 'named' => 'last'], ['first', 'named' => 'last']],
+    'native invalid order' => [['named' => 'last', 0 => 'first'], null],
+]);

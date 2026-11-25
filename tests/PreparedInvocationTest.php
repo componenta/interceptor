@@ -660,3 +660,30 @@ it('leaves explicitly supplied DI arguments in their supplied format when replac
 
     expect($pipeline->handle($changed))->toBe(['new', 'named' => 'new']);
 });
+
+
+it('retains the insertion order of edited positional variadics when inheriting them as DI input', function (): void {
+    $target = static fn (string $first, string ...$rest): array => [$first, $rest];
+    $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
+    $original = new CallableContext(new \Componenta\DI\PreparedCallable($target), ['original']);
+    $edited = $original->withParameters([0 => 'value', 5 => 'first', 2 => 'second', 'rest' => 'last']);
+    $replacement = $edited->withCallable($target);
+
+    $expected = ['value', ['first', 'second', 'rest' => 'last']];
+    expect($pipeline->handle($edited))->toBe($expected)
+        ->and($pipeline->handle($replacement))->toBe($expected)
+        ->and($pipeline->handle($original))->toBe(['original', []]);
+});
+
+it('inherits fixed arguments without requiring an explicit variadic collection', function (bool $variadic): void {
+    $target = $variadic
+        ? static fn (string $first, string ...$rest): array => [$first, $rest]
+        : static fn (string $first): array => [$first, []];
+    $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
+    $context = new CallableContext(new \Componenta\DI\PreparedCallable($target), ['first' => 'value']);
+    $replacement = $context->withCallable($target);
+
+    expect($replacement->parameters)->toBe(['first' => 'value'])
+        ->and($replacement->prepared)->toBeFalse()
+        ->and($pipeline->handle($replacement))->toBe(['value', []]);
+})->with(['fixed only' => [false], 'empty variadic tail' => [true]]);
