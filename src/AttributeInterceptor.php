@@ -14,22 +14,21 @@ use UnexpectedValueException;
 
 /**
  * Executes native attributes in declaration order.
- * Only Reflection metadata is cached; attributes, their arguments and
- * factory-created interceptors are materialized afresh for every invocation.
+ * Only Reflection metadata is cached. Native attributes and arguments are
+ * materialized for every call. Factory-created instances follow the factory's lifetime contract.
  */
 final class AttributeInterceptor implements InterceptorInterface
 {
     /** @var array<string, list<ReflectionAttribute<object>>> */
     private array $attributes = [];
-    /** @var array<string, list<int>> */
-    private readonly array $attributeMap;
-
-    /** @param array<string, list<int>> $attributeMap Attribute positions by callable signature. */
+    /**
+     * @param array<string, list<int>> $attributeMap Legacy build hint, accepted for migration only.
+     *        Source declarations are authoritative; positional maps cannot prove completeness.
+     */
     public function __construct(
         private readonly FactoryInterface $factory,
         array $attributeMap = [],
     ) {
-        $this->attributeMap = AttributeMetadata::validMap($attributeMap) ? $attributeMap : [];
     }
 
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
@@ -39,11 +38,7 @@ final class AttributeInterceptor implements InterceptorInterface
         $attributes = $signature === null ? null : ($this->attributes[$signature] ?? null);
         if ($attributes === null) {
             $cacheable = true;
-            $attributes = AttributeMetadata::resolve(
-                $reflector,
-                $signature === null ? null : ($this->attributeMap[$signature] ?? null),
-                $cacheable,
-            );
+            $attributes = AttributeMetadata::resolve($reflector, $cacheable);
             if ($signature !== null && $cacheable) {
                 $this->attributes[$signature] = $attributes;
             }

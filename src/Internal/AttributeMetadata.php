@@ -45,30 +45,13 @@ final class AttributeMetadata
     }
 
     /**
-     * @param list<int>|null $positions
      * @param bool $cacheable False when an unavailable attribute class may become an interceptor later.
      * @return list<ReflectionAttribute<object>>
      */
-    public static function resolve(ReflectionFunctionAbstract $reflector, ?array $positions = null, bool &$cacheable = true): array
+    public static function resolve(ReflectionFunctionAbstract $reflector, bool &$cacheable): array
     {
         $cacheable = true;
-        if ($positions === []) {
-            return [];
-        }
         $attributes = $reflector->getAttributes();
-        if ($positions !== null) {
-            $selected = [];
-            foreach ($positions as $position) {
-                if (!isset($attributes[$position]) || !self::supports($attributes[$position])) {
-                    $positions = null;
-                    break;
-                }
-                $selected[] = $attributes[$position];
-            }
-            if ($positions !== null) {
-                return $selected;
-            }
-        }
         $selected = [];
         foreach ($attributes as $attribute) {
             if (self::supports($attribute)) {

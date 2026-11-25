@@ -59,8 +59,25 @@ final class ThrowingNativeAttribute implements InterceptorInterface
         return $handler->handle($context);
     }
 }
+#[Attribute(Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
+final readonly class NativePolicy implements InterceptorInterface
+{
+    public function __construct(private string $name) {}
+
+    public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
+    {
+        return $this->name . ':' . $handler->handle($context);
+    }
+}
 final class NativeAttributeTarget
 {
+    #[NativePolicy('authorization')]
+    #[NativePolicy('cache')]
+    public function policies(): string
+    {
+        return 'value';
+    }
+
     #[Intercept(FactoryStateInterceptor::class)]
     public function factory(): string
     {
@@ -122,3 +139,23 @@ it('falls back from malformed or out of range prepared metadata before materiali
     'bad shape' => [[NativeAttributeTarget::class . '::factory' => ['wrong']]],
     'missing position' => [[NativeAttributeTarget::class . '::factory' => [50]]],
 ]);
+
+it('never allows a stale or incomplete positional map to suppress source interceptors', function (array $positions): void {
+    $pipeline = nativeAttributePipeline([NativeAttributeTarget::class . '::policies' => $positions]);
+    $target = new NativeAttributeTarget();
+
+    expect($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value')
+        ->and($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value');
+})->with([
+    'stale negative entry' => [[]],
+    'only first attribute' => [[0]],
+    'only last attribute' => [[1]],
+    'complete entry' => [[0, 1]],
+    'out of range' => [[50]],
+]);
+
+it('preserves native attribute errors even when a stale map is empty', function (string $method): void {
+    $pipeline = nativeAttributePipeline([NativeAttributeTarget::class . '::' . $method => []]);
+
+    expect(fn () => $pipeline->call([new NativeAttributeTarget(), $method]))->toThrow(Error::class);
+})->with(['wrongTarget', 'repeated']);
