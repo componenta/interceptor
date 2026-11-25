@@ -40,7 +40,7 @@ final readonly class HttpInterceptorPipelineFactory
 
         return new InterceptingExecutor(
             $container->get(CallableExecutorInterface::class, CallableExecutorInterface::class),
-            new ParameterResolvingInterceptor($parametersResolver->resolve(...)),
+            new ParameterResolvingInterceptor($parametersResolver),
             ...$resolved,
         );
     }

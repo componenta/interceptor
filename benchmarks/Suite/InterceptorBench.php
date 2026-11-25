@@ -144,7 +144,7 @@ final class InterceptorBench
         BenchTarget $target,
         bool $edit,
     ): Closure {
-        $pipeline = new InterceptingExecutor($executor, new ParameterResolvingInterceptor($resolver->resolve(...)));
+        $pipeline = new InterceptingExecutor($executor, new ParameterResolvingInterceptor($resolver));
         if ($edit) {
             $pipeline = $pipeline->pipe(CallbackInterceptorFactory::before(
                 static fn (CallableContextInterface $context): CallableContextInterface => $context->withParameter('value', 7),

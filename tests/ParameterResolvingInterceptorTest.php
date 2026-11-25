@@ -9,6 +9,7 @@ use Componenta\DI\ContainerFactory;
 use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\ParameterResolvingInterceptor;
+use Componenta\Interceptor\Tests\Fixture\CallbackParametersResolver;
 
 final class ParameterResolutionDependency
 {
@@ -18,7 +19,7 @@ function parameterResolutionPipeline(): InterceptingExecutor
     $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
     return new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
-        new ParameterResolvingInterceptor($container->get(ParametersResolverInterface::class, ParametersResolverInterface::class)->resolve(...))
+        new ParameterResolvingInterceptor($container->get(ParametersResolverInterface::class, ParametersResolverInterface::class))
     );
 }
 it('preserves calls without parameters', function (): void {
@@ -33,14 +34,14 @@ it('resolves missing dependencies while retaining explicit arguments and PHP def
 });
 
 
-it('accepts an independent argument resolution operation and uses its native result', function (): void {
+it('accepts an independent parameter resolver implementation and uses its native result', function (): void {
     $calls = [];
     $pipeline = new InterceptingExecutor(
         new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
-        new ParameterResolvingInterceptor(static function (array $parameters, array $provided) use (&$calls): array {
+        new ParameterResolvingInterceptor(new CallbackParametersResolver(static function (array $parameters, array $provided) use (&$calls): array {
             $calls[] = [array_map(static fn (ReflectionParameter $parameter): string => $parameter->getName(), $parameters), $provided];
             return ['value' => 'resolved:' . $provided['value']];
-        }),
+        })),
     );
 
     expect($pipeline->call(static fn (string $value): string => $value, ['value' => 'input']))->toBe('resolved:input')
@@ -52,7 +53,7 @@ it('normalizes foreign preparation failures without invoking the target', functi
     $called = false;
     $pipeline = new InterceptingExecutor(
         new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
-        new ParameterResolvingInterceptor(static fn (array $parameters, array $provided): never => throw $failure),
+        new ParameterResolvingInterceptor(new CallbackParametersResolver(static fn (array $parameters, array $provided): never => throw $failure)),
     );
 
     $caught = null;
@@ -76,9 +77,9 @@ it('propagates DI resolution failures and downstream application failures unchan
         : new DomainException('target failure');
     $pipeline = new InterceptingExecutor(
         new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
-        new ParameterResolvingInterceptor(
+        new ParameterResolvingInterceptor(new CallbackParametersResolver(
             static fn (array $parameters, array $provided): array => $duringResolution ? throw $failure : ['value' => 'ready'],
-        ),
+        )),
     );
 
     $caught = null;
@@ -94,7 +95,7 @@ it('propagates DI resolution failures and downstream application failures unchan
 it('does not run a parameter resolution operation for prepared or native magic calls', function (): void {
     $pipeline = new InterceptingExecutor(
         new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
-        new ParameterResolvingInterceptor(static fn (): never => throw new LogicException('Unexpected resolution.')),
+        new ParameterResolvingInterceptor(new CallbackParametersResolver(static fn (): never => throw new LogicException('Unexpected resolution.'))),
     );
     $target = new class {
         public function __call(string $name, array $arguments): array

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
-use Closure;
 use Componenta\DI\Exception\ExceptionInterface;
 use Componenta\DI\Exception\InvalidCallableException;
-use ReflectionParameter;
+use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Throwable;
 
 /**
@@ -20,11 +19,8 @@ use Throwable;
  */
 final readonly class ParameterResolvingInterceptor implements InterceptorInterface
 {
-    /**
-     * @param Closure(list<ReflectionParameter>, array<string|int, mixed>): array<string|int, mixed> $resolveParameters
-     */
     public function __construct(
-        private Closure $resolveParameters,
+        private ParametersResolverInterface $parametersResolver,
     ) {}
 
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
@@ -37,7 +33,7 @@ final readonly class ParameterResolvingInterceptor implements InterceptorInterfa
             $reflector = $context->reflector;
             $parameters = $reflector === null
                 ? $context->parameters
-                : ($this->resolveParameters)($reflector->getParameters(), $context->parameters);
+                : $this->parametersResolver->resolve($reflector->getParameters(), $context->parameters);
 
             $prepared = $context->withPreparedParameters($parameters);
         } catch (ExceptionInterface $error) {

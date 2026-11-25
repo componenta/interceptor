@@ -203,12 +203,12 @@ Register `ParameterResolvingInterceptor` to enrich the callable's parameters thr
 ```php
 new InterceptingExecutor(
     $container->get(CallableExecutorInterface::class),
-    new ParameterResolvingInterceptor($parametersResolver->resolve(...)), // outermost — runs first
+    new ParameterResolvingInterceptor($container->get(ParametersResolverInterface::class)), // outermost — runs first
     $container->get(AttributeInterceptor::class),
 );
 ```
 
-The constructor accepts a first-class callable with the signature `Closure(list<ReflectionParameter>, array): array`, not a concrete DI resolver. The operation returns the native invocation argument vector with variadic values expanded. Existing DI exceptions propagate unchanged; foreign failures during preparation become `InvalidCallableException` with the original cause. Downstream exceptions are not normalized by this interceptor.
+The constructor accepts DI's `ParametersResolverInterface`, not a concrete implementation. The contract returns the native invocation argument vector with variadic values expanded. Existing DI exceptions propagate unchanged; foreign failures during preparation become `InvalidCallableException` with the original cause. Downstream exceptions are not normalized by this interceptor.
 
 This lets attribute interceptors read resolved arguments (e.g., `$ctx->parameters` for cache keys).
 
@@ -220,7 +220,7 @@ Reading, updating and removing a prepared fixed parameter by name or position ad
 
 PreparedCallable arguments follow native PHP binding: integer keys bind in insertion order, while string keys bind by name. Untouched arguments retain native binding errors. Editing parameters through the context switches to logical name/position binding, so removing a fixed argument preserves the positions of its neighbours.
 
-Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and logical edits discard a duplicate positional alias when a named value takes precedence; and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with `withCallable()` starts ordinary DI resolution for the new target unless a `PreparedCallable` is supplied. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor. A string that has already been selected as a native callable is invoked as a native function or method rather than being looked up as another service ID.
+Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and logical edits discard a duplicate positional alias when a named value takes precedence; and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with `withCallable()` starts ordinary DI resolution for the new target unless a `PreparedCallable` is supplied. A prepared replacement inherits logical argument positions when no explicit argument list is supplied; omitted values then use the replacement target's defaults. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor. A string that has already been selected as a native callable is invoked as a native function or method rather than being looked up as another service ID.
 
 Prepared arguments and top-level context slots are passed by value; by-reference parameter mutation is not supported by this pipeline. Use DI's native `CallableInvoker` for explicit reference-bearing arguments. To share context attributes across nested pipelines, compose them with `pipe()`; the DI executor's `call()` boundary carries only the callable and arguments.
 
