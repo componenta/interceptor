@@ -203,10 +203,12 @@ Register `ParameterResolvingInterceptor` to enrich the callable's parameters thr
 ```php
 new InterceptingExecutor(
     $container->get(CallableExecutorInterface::class),
-    new ParameterResolvingInterceptor($parametersResolver), // outermost — runs first
+    new ParameterResolvingInterceptor($parametersResolver->resolve(...)), // outermost — runs first
     $container->get(AttributeInterceptor::class),
 );
 ```
+
+The constructor accepts a first-class callable with the signature `Closure(list<ReflectionParameter>, array): array`, not a concrete DI resolver. The operation returns the native invocation argument vector with variadic values expanded. Existing DI exceptions propagate unchanged; foreign failures during preparation become `InvalidCallableException` with the original cause. Downstream exceptions are not normalized by this interceptor.
 
 This lets attribute interceptors read resolved arguments (e.g., `$ctx->parameters` for cache keys).
 

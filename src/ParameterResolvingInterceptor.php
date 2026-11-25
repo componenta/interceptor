@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
+use Closure;
+use Componenta\DI\Exception\ExceptionInterface;
+use Componenta\DI\Exception\InvalidCallableException;
+use ReflectionParameter;
+use Throwable;
 
 /**
- * Resolves callable parameters through DI before delegating downstream.
+ * Prepares callable arguments before downstream interceptors run.
  *
- * Register this interceptor before any interceptor that reads
- * {@see CallableContextInterface::$parameters}. Under the FIFO
- * execution order of {@see InterceptingExecutor}, that typically means
- * registering it first (so it becomes the outermost wrapper).
- *
- * Prepared contexts retain their arguments through downstream interceptors.
- * The terminal invokes them without repeating DI attribute processing.
+ * The resolver receives the reflected parameter declarations and supplied
+ * arguments, and returns a complete native invocation vector. It may omit
+ * optional arguments, but must expand positional and named variadic values.
+ * Prepared contexts and native magic calls do not run the resolver.
  */
 final readonly class ParameterResolvingInterceptor implements InterceptorInterface
 {
+    /**
+     * @param Closure(list<ReflectionParameter>, array<string|int, mixed>): array<string|int, mixed> $resolveParameters
+     */
     public function __construct(
-        private ParametersResolver $parametersResolver,
-    ) {
-    }
+        private Closure $resolveParameters,
+    ) {}
 
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
@@ -30,11 +33,21 @@ final readonly class ParameterResolvingInterceptor implements InterceptorInterfa
             return $handler->handle($context);
         }
 
-        $reflector = $context->reflector;
-        $parameters = $reflector === null
-            ? $context->parameters
-            : $this->parametersResolver->resolve($reflector->getParameters(), $context->parameters);
+        try {
+            $reflector = $context->reflector;
+            $parameters = $reflector === null
+                ? $context->parameters
+                : ($this->resolveParameters)($reflector->getParameters(), $context->parameters);
 
-        return $handler->handle($context->withPreparedParameters($parameters));
+            $prepared = $context->withPreparedParameters($parameters);
+        } catch (ExceptionInterface $error) {
+            throw $error;
+        } catch (Throwable $error) {
+            throw InvalidCallableException::forValue($context->getCallable(), $error);
+        }
+
+        // The continuation owns its own errors; application failures are not
+        // parameter-resolution failures.
+        return $handler->handle($prepared);
     }
 }

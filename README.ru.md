@@ -203,10 +203,12 @@ $tracer = F::around(
 ```php
 new InterceptingExecutor(
     $container->get(CallableExecutorInterface::class),
-    new ParameterResolvingInterceptor($parametersResolver), // самый внешний — выполнится первым
+    new ParameterResolvingInterceptor($parametersResolver->resolve(...)), // самый внешний — выполнится первым
     $container->get(AttributeInterceptor::class),
 );
 ```
+
+Конструктор принимает замыкание с контрактом `Closure(list<ReflectionParameter>, array): array`, а не конкретную реализацию разрешателя DI. Операция возвращает нативный список аргументов с развёрнутыми вариативными значениями. Исключения DI передаются без изменений; другие ошибки подготовки оборачиваются в `InvalidCallableException` с исходной причиной. Исключения последующих обработчиков не преобразуются этим перехватчиком.
 
 Это позволяет атрибутным перехватчикам читать разрешённые аргументы (например, `$ctx->parameters` для ключа кэша).
 

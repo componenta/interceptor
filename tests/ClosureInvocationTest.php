@@ -38,7 +38,7 @@ test('keeps interceptor attributes specific to each closure representation', fun
     $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
     $pipeline = new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
-        new ParameterResolvingInterceptor($container->get(ParametersResolver::class)),
+        new ParameterResolvingInterceptor($container->get(ParametersResolver::class, ParametersResolver::class)->resolve(...)),
         new AttributeInterceptor($container->get(FactoryInterface::class)),
     );
     $first = #[Envelope('first')] static fn (string $value): string => $value;
