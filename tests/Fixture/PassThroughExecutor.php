@@ -15,6 +15,6 @@ final class PassThroughExecutor implements CallableExecutorInterface
 
     public function call(mixed $callable, array $params = []): mixed
     {
-        return $callable(...array_values($params));
+        return $callable(...$params);
     }
 }

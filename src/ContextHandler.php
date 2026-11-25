@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Closure;
 use Componenta\DI\CallableInvokerInterface;
 use Componenta\DI\PreparedCallable;
 use Componenta\Interceptor\Internal\ResolvedCallableContext;
@@ -48,6 +49,16 @@ final readonly class ContextHandler implements ContextHandlerInterface
             return $this->executor->call(new PreparedCallable($context->getCallable()), $context->invocationArguments());
         }
 
-        return $this->executor->call($context->getCallable(), $context->parameters);
+        $callable = $context->getCallable();
+        if (is_string($callable)) {
+            // DI resolves strings as service IDs before native callable names.
+            // Preserve the native target selected by the resolver/context.
+            // A method pair retains native magic dispatch and called-class semantics.
+            $callable = str_contains($callable, '::')
+                ? explode('::', $callable, 2)
+                : Closure::fromCallable($callable);
+        }
+
+        return $this->executor->call($callable, $context->parameters);
     }
 }

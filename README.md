@@ -220,7 +220,9 @@ PreparedCallable is recognized by call(), handle() and intercept(), including co
 
 PreparedCallable arguments follow native PHP binding: integer keys bind in insertion order, while string keys bind by name. Untouched arguments retain native binding errors. Editing parameters through the context switches to logical name/position binding, so removing a fixed argument preserves the positions of its neighbours.
 
-Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with withCallable() starts ordinary DI resolution for the new target. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor.
+Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with withCallable() starts ordinary DI resolution for the new target. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor. A string that has already been selected as a native callable is invoked as a native function or method rather than being looked up as another service ID.
+
+Prepared arguments and top-level context slots are passed by value; by-reference parameter mutation is not supported by this pipeline. Use DI's native `CallableInvoker` for explicit reference-bearing arguments. To share context attributes across nested pipelines, compose them with `pipe()`; the DI executor's `call()` boundary carries only the callable and arguments.
 
 ## Caching
 
