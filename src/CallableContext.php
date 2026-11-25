@@ -202,12 +202,21 @@ final class CallableContext implements CallableContextInterface
             $attributes ?? $this->attributeSlots,
         );
 
-        // Inherited logical slots describe declaration positions, not a
-        // native vector. Reindexing them would move arguments into omitted
-        // fixed parameters of the replacement callable.
-        if ($parameters === null && $this->mode === ArgumentMode::Logical && $copy->prepared) {
-            $copy->argumentSlots = ArgumentBinding::logical($copy->reflector, $this->argumentSlots);
-            $copy->mode = ArgumentMode::Logical;
+        if ($parameters === null && $this->prepared) {
+            if (!$copy->prepared) {
+                // The ordinary DI resolver expects one collection for the
+                // variadic declaration, unlike a flattened native vector.
+                $copy->argumentSlots = ArgumentBinding::supplied(
+                    $copy->reflector,
+                    $this->argumentSlots,
+                    $this->mode === ArgumentMode::Logical,
+                );
+            } elseif ($this->mode === ArgumentMode::Logical) {
+                // Logical slots refer to declaration positions, not a native
+                // vector. Do not shift them into omitted fixed parameters.
+                $copy->argumentSlots = ArgumentBinding::logical($copy->reflector, $this->argumentSlots);
+                $copy->mode = ArgumentMode::Logical;
+            }
         }
 
         return $copy;

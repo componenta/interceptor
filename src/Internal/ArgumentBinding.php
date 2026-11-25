@@ -79,6 +79,42 @@ final class ArgumentBinding
     }
 
     /**
+     * Adapt inherited prepared slots to the DI input representation of the
+     * replacement declaration. Named variadic values are literal argument
+     * names, including a name equal to the variadic declaration itself.
+     *
+     * @param array<string|int, mixed> $arguments
+     * @return array<string|int, mixed>
+     */
+    public static function supplied(?ReflectionFunctionAbstract $reflector, array $arguments, bool $logical): array
+    {
+        if ($reflector === null) {
+            // A magic callable has no DI declaration. Retain native errors
+            // for untouched vectors; logical edits need a valid native order.
+            return $logical ? self::native(null, $arguments) : $arguments;
+        }
+
+        $remaining = $arguments;
+        foreach ($reflector->getParameters() as $parameter) {
+            if ($parameter->isVariadic()) {
+                if ($remaining === []) {
+                    return $arguments;
+                }
+
+                [$positional, $named] = self::splitTail($remaining);
+                $fixed = array_diff_key($arguments, $remaining);
+                $fixed[$parameter->getName()] = [...$positional, ...$named];
+
+                return $fixed;
+            }
+
+            unset($remaining[$parameter->getName()], $remaining[$parameter->getPosition()]);
+        }
+
+        return $arguments;
+    }
+
+    /**
      * @param array<string|int, mixed> $remaining
      * @return array<string|int, mixed>
      */
@@ -101,15 +137,7 @@ final class ArgumentBinding
             unset($remaining[$name], $remaining[$position]);
         }
 
-        $positionalTail = [];
-        $namedTail = [];
-        foreach ($remaining as $key => $value) {
-            if (is_int($key)) {
-                $positionalTail[] = $value;
-            } else {
-                $namedTail[$key] = $value;
-            }
-        }
+        [$positionalTail, $namedTail] = self::splitTail($remaining);
 
         if ($positionalTail === []) {
             return [...$fixed, ...$namedTail];
@@ -133,5 +161,24 @@ final class ArgumentBinding
         }
 
         return [...$arguments, ...$positionalTail, ...$namedTail];
+    }
+
+    /**
+     * @param array<string|int, mixed> $remaining
+     * @return array{list<mixed>, array<string, mixed>}
+     */
+    private static function splitTail(array $remaining): array
+    {
+        $positional = [];
+        $named = [];
+        foreach ($remaining as $key => $value) {
+            if (is_int($key)) {
+                $positional[] = $value;
+            } else {
+                $named[$key] = $value;
+            }
+        }
+
+        return [$positional, $named];
     }
 }
