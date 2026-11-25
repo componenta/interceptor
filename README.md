@@ -68,7 +68,7 @@ interface InterceptorInterface
 
 ### Context
 
-Immutable object carrying the callable, its parameters, arbitrary attributes, and a lazily-resolved reflector. Callable array slots and top-level argument/attribute slots are captured by value; objects and nested reference-bearing values are not deep-cloned. Mutators return new instances:
+Immutable object carrying the callable, its parameters, arbitrary attributes, and a lazily-resolved reflector. Callable array slots and top-level argument/attribute slots are captured by value; objects and nested reference-bearing values are not deep-cloned. Attribute keys follow PHP array-key normalization, including integer-like string names. Creating a scoped context preserves existing keys and overrides only the scope marker. Mutators return new instances:
 
 ```php
 $context = $context

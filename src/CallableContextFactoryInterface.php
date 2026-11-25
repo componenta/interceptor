@@ -20,7 +20,7 @@ interface CallableContextFactoryInterface
      *
      * @param mixed $callable The callable or its representation to resolve and wrap.
      * @param array<string|int, mixed> $params Parameters for the callable invocation.
-     * @param array<string, mixed> $attributes Arbitrary attributes for the context.
+     * @param array<string|int, mixed> $attributes Arbitrary attributes for the context.
      * @return CallableContextInterface The created context.
      * @throws ExceptionInterface If the callable cannot be resolved or captured.
      */

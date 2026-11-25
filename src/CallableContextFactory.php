@@ -34,7 +34,7 @@ final readonly class CallableContextFactory implements CallableContextFactoryInt
      *
      * @param mixed $callable The callable or its representation.
      * @param array<string|int, mixed> $params Parameters for invocation.
-     * @param array<string, mixed> $attributes Arbitrary attributes.
+     * @param array<string|int, mixed> $attributes Arbitrary attributes.
      * @return CallableContextInterface The created context.
      *
      * @throws ExceptionInterface If the callable cannot be resolved or captured.

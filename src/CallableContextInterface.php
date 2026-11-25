@@ -36,9 +36,11 @@ interface CallableContextInterface
      * Arbitrary attributes for interceptor communication.
      *
      * Attributes allow interceptors to pass data to each other
-     * without modifying the callable or its parameters.
+     * without modifying the callable or its parameters. PHP canonicalizes
+     * integer-like string keys to integers; those names are preserved when
+     * creating or copying a context.
      *
-     * @var array<string, mixed>
+     * @var array<string|int, mixed>
      */
     public array $attributes { get; }
 
@@ -85,7 +87,7 @@ interface CallableContextInterface
     /**
      * Creates a new context with the given attributes, replacing all existing ones.
      *
-     * @param array<string, mixed> $attributes The new attributes.
+     * @param array<string|int, mixed> $attributes The new attributes.
      * @return CallableContextInterface A new context with the specified attributes.
      */
     public function withAttributes(array $attributes): CallableContextInterface;
@@ -169,7 +171,7 @@ interface CallableContextInterface
      *
      * @param callable $callable The new callable.
      * @param array<string|int, mixed>|null $parameters New parameters, or null to keep current.
-     * @param array<string, mixed>|null $attributes New attributes, or null to keep current.
+     * @param array<string|int, mixed>|null $attributes New attributes, or null to keep current.
      */
     public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface;
 }

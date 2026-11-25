@@ -21,7 +21,7 @@ final class CallableContext implements CallableContextInterface
     private readonly mixed $callable;
     /** @var array<string|int, mixed> */
     private array $argumentSlots;
-    /** @var array<string, mixed> */
+    /** @var array<string|int, mixed> */
     private array $attributeSlots;
     private ArgumentMode $mode;
     private bool $reflectionResolved = false;
@@ -46,7 +46,7 @@ final class CallableContext implements CallableContextInterface
     /**
      * @param callable $callable
      * @param array<string|int, mixed> $parameters
-     * @param array<string, mixed> $attributes
+     * @param array<string|int, mixed> $attributes
      */
     public function __construct(
         callable|string|array $callable,
@@ -87,7 +87,7 @@ final class CallableContext implements CallableContextInterface
     /**
      * @param callable $callable
      * @param array<string|int, mixed> $parameters
-     * @param array<string, mixed> $attributes
+     * @param array<string|int, mixed> $attributes
      */
     public static function scoped(
         ScopeInterface $scope,
@@ -95,7 +95,7 @@ final class CallableContext implements CallableContextInterface
         array $parameters = [],
         array $attributes = [],
     ): self {
-        return new self($callable, $parameters, [...$attributes, self::SCOPE_ATTRIBUTE => $scope]);
+        return new self($callable, $parameters, array_replace($attributes, [self::SCOPE_ATTRIBUTE => $scope]));
     }
 
     public function getCallable(): callable
