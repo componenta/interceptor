@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\Interceptor\Internal\CallbackInterceptor;
 use Componenta\Interceptor\Internal\NativeCallable;
 
 /**

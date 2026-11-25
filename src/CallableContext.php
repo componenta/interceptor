@@ -17,8 +17,6 @@ use ReflectionFunctionAbstract;
 /** Immutable invocation context with value-owned top-level argument and attribute slots. */
 final class CallableContext implements CallableContextInterface
 {
-    public const string SCOPE_ATTRIBUTE = 'interceptor.scope';
-
     /** @var callable */
     private readonly mixed $callable;
     /** @var array<string|int, mixed> */

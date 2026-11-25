@@ -5,28 +5,34 @@ declare(strict_types=1);
 namespace Componenta\Interceptor\Attribute;
 
 use Attribute;
-use Componenta\Interceptor\InterceptorInterface;
+use Componenta\Interceptor\Internal\ArraySlots;
+use InvalidArgumentException;
 
 /**
- * Declares an interceptor to be applied to a callable.
+ * Declares an interceptor service resolved through DI's FactoryInterface.
  *
- * Can be used directly or extended by custom attributes.
- *
- * Subclasses may implement {@see \Componenta\Scope\ScopedInterface}
- * to restrict scope at the attribute level. Attribute-level scope
- * takes priority over interceptor-level scope.
- *
- * @param class-string<InterceptorInterface> $interceptor
- * @param array<string, mixed> $params Constructor parameters.
+ * Subclasses may implement ScopedInterface to restrict scope at the attribute
+ * level. Attribute-level scope takes priority over interceptor-level scope.
  */
 #[Attribute(Attribute::TARGET_METHOD | Attribute::TARGET_FUNCTION | Attribute::IS_REPEATABLE)]
 class Intercept
 {
-    /** @param class-string<InterceptorInterface> $interceptor
-     * @param array<string|int, mixed> $params */
-    public function __construct(
-        public readonly string $interceptor,
-        public readonly array $params = [],
-    ) {
+    /** @var non-empty-string */
+    public readonly string $interceptor;
+    /** @var array<string|int, mixed> */
+    public readonly array $params;
+
+    /**
+     * @param non-empty-string $interceptor Factory entry identifier.
+     * @param array<string|int, mixed> $params Constructor parameters.
+     */
+    public function __construct(string $interceptor, array $params = [])
+    {
+        if (trim($interceptor) === '') {
+            throw new InvalidArgumentException('Interceptor factory entry must be non-empty.');
+        }
+
+        $this->interceptor = $interceptor;
+        $this->params = ArraySlots::snapshot($params);
     }
 }

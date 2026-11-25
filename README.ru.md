@@ -16,7 +16,6 @@ composer require componenta/interceptor
 ## Требования
 
 - PHP 8.5.13+
-- `psr/container`
 - `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolver`)
 - `componenta/reflection` 3 (ленивое разрешение рефлектора)
 - `componenta/config` (опционально — интеграция через `ConfigProvider`)
@@ -169,7 +168,7 @@ final class RespondInterceptor implements InterceptorInterface, ScopedInterface
 use Componenta\Interceptor\CallableContext;
 use Componenta\Interceptor\Scope;
 
-$context = $context->withAttribute(CallableContext::SCOPE_ATTRIBUTE, Scope::HTTP);
+$context = $context->withAttribute(CallableContextInterface::SCOPE_ATTRIBUTE, Scope::HTTP);
 ```
 
 Скоп на атрибуте имеет приоритет над скопом на инстансе и проверяется до создания зависимостей интерцептора. Перехватчики без `ScopedInterface` подходят под любую область применения. Отсутствующее значение или `null` отключает фильтрацию; любое другое значение должно реализовать `ScopeInterface`.

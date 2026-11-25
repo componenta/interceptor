@@ -2,24 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Componenta\Interceptor;
+namespace Componenta\Interceptor\Internal;
 
 use Closure;
-use Componenta\Interceptor\Internal\NativeCallable;
+use Componenta\Interceptor\CallableContextInterface;
+use Componenta\Interceptor\ContextHandlerInterface;
+use Componenta\Interceptor\InterceptorInterface;
 
 /**
  * Interceptor implementation that delegates to a callback.
  *
  * Allows creating interceptors without dedicated classes.
  *
- * @internal Use {@see CallbackInterceptorFactory} to create instances.
+ * @internal Created through the public callback factory.
  */
-final class CallbackInterceptor implements InterceptorInterface
+final readonly class CallbackInterceptor implements InterceptorInterface
 {
     /**
      * @var callable(CallableContextInterface, ContextHandlerInterface): mixed
      */
-    private readonly Closure $callback;
+    private Closure $callback;
 
     /**
      * @param callable(CallableContextInterface, ContextHandlerInterface): mixed $callback

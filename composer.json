@@ -8,8 +8,7 @@
         "componenta/config": "^3.0.0",
         "componenta/di": "^6.0@dev",
         "componenta/reflection": "^3.0",
-        "componenta/scope": "^1.0",
-        "psr/container": "^2.0"
+        "componenta/scope": "^1.0"
     },
     "require-dev": {
         "pestphp/pest": "^4.0",

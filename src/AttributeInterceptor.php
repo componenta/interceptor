@@ -8,8 +8,8 @@ use Componenta\DI\FactoryInterface;
 use Componenta\Interceptor\Internal\AttributeHandler;
 use Componenta\Interceptor\Internal\AttributeMetadata;
 use Componenta\Scope\ScopeInterface;
-use ReflectionAttribute;
 use InvalidArgumentException;
+use ReflectionAttribute;
 
 /**
  * Executes native attributes in declaration order.
@@ -20,6 +20,7 @@ final class AttributeInterceptor implements InterceptorInterface
 {
     /** @var array<string, list<ReflectionAttribute<object>>> */
     private array $attributes = [];
+
     public function __construct(
         private readonly FactoryInterface $factory,
     ) {
@@ -27,7 +28,7 @@ final class AttributeInterceptor implements InterceptorInterface
 
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
-        $scope = $context->getAttribute(CallableContext::SCOPE_ATTRIBUTE);
+        $scope = $context->getAttribute(CallableContextInterface::SCOPE_ATTRIBUTE);
         if ($scope !== null && !$scope instanceof ScopeInterface) {
             throw new InvalidArgumentException('The interceptor scope must implement ScopeInterface.');
         }

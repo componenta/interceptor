@@ -16,7 +16,6 @@ composer require componenta/interceptor
 ## Requirements
 
 - PHP 8.5.13+
-- `psr/container`
 - `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolver`)
 - `componenta/reflection` 3 (lazy reflector resolution)
 - `componenta/config` (optional `ConfigProvider` integration)
@@ -120,7 +119,7 @@ final class UserController
 }
 ```
 
-Resolution is driven by `AttributeInterceptor` (register it once in your pipeline). The interceptor instance is built via `FactoryInterface` with the declared `params` when its layer is reached. Short-circuiting skips the construction and execution of inner layers. Attributes are read as layers wrapped around the method, **from outside in** — the topmost attribute is the outermost layer (enters first, returns last), the bottommost attribute is closest to the method body.
+Resolution is driven by `AttributeInterceptor` (register it once in your pipeline). The interceptor instance is built via `FactoryInterface` with the declared `params` when its layer is reached. The first `Intercept` argument is a non-empty factory entry ID, typically an interceptor class name. Short-circuiting skips the construction and execution of inner layers. Attributes are read as layers wrapped around the method, **from outside in** — the topmost attribute is the outermost layer (enters first, returns last), the bottommost attribute is closest to the method body.
 
 Put authorization before any cache that can short-circuit it. Put entry-side interceptors (authorization, rate limits, caching gates) above result-side ones (response formatting, serialization, pagination). The method's return value flows outward through the inner layers first, so a serializer placed below a response wrapper gets the raw value and passes the serialized string up to the wrapper:
 
@@ -169,7 +168,7 @@ The integrator signals the current scope by setting a context attribute before t
 use Componenta\Interceptor\CallableContext;
 use Componenta\Interceptor\Scope;
 
-$context = $context->withAttribute(CallableContext::SCOPE_ATTRIBUTE, Scope::HTTP);
+$context = $context->withAttribute(CallableContextInterface::SCOPE_ATTRIBUTE, Scope::HTTP);
 ```
 
 Attribute-level scope takes priority over instance-level scope and is checked before resolving the interceptor's dependencies. Interceptors without either `ScopedInterface` always match. An absent or null scope disables scope filtering; another value that does not implement `ScopeInterface` is rejected.

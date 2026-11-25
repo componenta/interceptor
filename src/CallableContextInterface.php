@@ -21,8 +21,12 @@ use ReflectionFunctionAbstract;
  */
 interface CallableContextInterface
 {
+    /** Optional scope marker. A non-null value must implement ScopeInterface. */
+    public const string SCOPE_ATTRIBUTE = 'interceptor.scope';
+
     /**
-     * Parameters to be passed to the callable during invocation.
+     * Supplied argument slots, or final values when prepared. For a prepared
+     * context, use invocationArguments() to obtain the native binding vector.
      *
      * @var array<string|int, mixed>
      */
@@ -112,6 +116,8 @@ interface CallableContextInterface
 
     /**
      * Creates a new context with the given parameters, replacing all existing ones.
+     * Prepared contexts retain preparation and interpret fixed argument keys as
+     * declaration names or positions; unprepared contexts retain DI input keys.
      *
      * @param array<string|int, mixed> $parameters The new parameters.
      * @return CallableContextInterface A new context with the specified parameters.
@@ -119,7 +125,8 @@ interface CallableContextInterface
     public function withParameters(array $parameters): CallableContextInterface;
 
     /**
-     * Retrieves a parameter value by key.
+     * Retrieves a parameter value by key. In a prepared context, a fixed
+     * parameter name and its declaration position refer to the same value.
      *
      * @param string|int $key The parameter key (name or position).
      * @param mixed $default Value to return if the parameter does not exist.
