@@ -100,6 +100,16 @@ final class BenchTarget
     {
         return $value + array_sum($rest);
     }
+
+    /** @param array<string|int, int> $arguments */
+    public function __call(string $name, array $arguments): int
+    {
+        if ($name !== 'dynamic') {
+            throw new LogicException('Unexpected dynamic target.');
+        }
+
+        return array_sum($arguments);
+    }
 }
 
 #[Bench\Iterations(7)]
@@ -117,7 +127,8 @@ final class InterceptorBench
             'native', 'di', 'pipeline-0', 'pipeline-1', 'pipeline-5', 'pipeline-10', 'pipeline-50',
             'attribute-none', 'attribute-native', 'attribute-factory', 'attribute-five', 'attribute-short-circuit',
             'nested-pipeline', 'di-preparation', 'di-preparation-edit',
-            'prepared-native', 'prepared-edit', 'context-handle', 'context-copy',
+            'prepared-native', 'prepared-edit', 'magic-native', 'magic-prepared', 'magic-edit',
+            'context-handle', 'context-copy',
         ] as $scenario) {
             yield $scenario => ['scenario' => $scenario];
         }
@@ -163,6 +174,7 @@ final class InterceptorBench
                     $scenario === 'di-preparation-edit',
                 ),
                 'prepared-native', 'prepared-edit' => $this->prepared($executor, $target, $scenario === 'prepared-edit'),
+                'magic-native', 'magic-prepared', 'magic-edit' => $this->magic($executor, $target, $scenario),
                 'context-handle', 'context-copy' => $this->context($executor, $plain, $scenario === 'context-copy'),
             };
         }
@@ -242,6 +254,25 @@ final class InterceptorBench
         $arguments = [$edit ? 1 : 3, 2, 'last' => 2];
 
         return static fn (): int => $pipeline->call($prepared, $arguments);
+    }
+
+    /** @return Closure(): int */
+    private function magic(CallableExecutorInterface $executor, BenchTarget $target, string $scenario): Closure
+    {
+        $pipeline = new InterceptingExecutor($executor);
+        $callable = [$target, 'dynamic'];
+        if ($scenario !== 'magic-native') {
+            $callable = new PreparedCallable($callable);
+        }
+        if ($scenario === 'magic-edit') {
+            $pipeline = $pipeline->pipe(CallbackInterceptorFactory::before(
+                static fn (CallableContextInterface $context): CallableContextInterface =>
+                    $context->withParameter(0, 3),
+            ));
+        }
+        $arguments = $scenario === 'magic-edit' ? ['named' => 4] : [3, 'named' => 4];
+
+        return static fn (): int => $pipeline->call($callable, $arguments);
     }
 
     /** @return Closure(): int */
