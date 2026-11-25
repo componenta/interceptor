@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\DI\CallableExecutorInterface;
+
 /**
  * Represents an immutable interceptor pipeline.
  *
@@ -14,7 +16,7 @@ namespace Componenta\Interceptor;
  * Implementations must be immutable - the {@see pipe()} method returns
  * a new pipeline instance with the added interceptor.
  */
-interface PipelineInterface extends ContextHandlerInterface, InterceptorInterface
+interface PipelineInterface extends CallableExecutorInterface, ContextHandlerInterface, InterceptorInterface
 {
     /**
      * Creates a new pipeline with the given interceptor appended.
@@ -22,5 +24,5 @@ interface PipelineInterface extends ContextHandlerInterface, InterceptorInterfac
      * @param InterceptorInterface ...$interceptor The interceptor to add.
      * @return PipelineInterface A new pipeline instance containing the added interceptor.
      */
-    public function pipe(InterceptorInterface  ...$interceptor): PipelineInterface;
+    public function pipe(InterceptorInterface ...$interceptor): PipelineInterface;
 }

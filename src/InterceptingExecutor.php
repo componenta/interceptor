@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
-use Componenta\DI\PreparedCallable;
 use Componenta\Interceptor\Internal\ArraySlots;
-use Componenta\Interceptor\Internal\ResolvedCallableContext;
 use Throwable;
 
 /**
@@ -28,7 +26,7 @@ use Throwable;
  * The executor is immutable - {@see pipe()} returns a new instance
  * with a fresh (uncomposed) pipeline.
  */
-final class InterceptingExecutor implements CallableExecutorInterface, PipelineInterface
+final class InterceptingExecutor implements PipelineInterface
 {
     /** @var list<InterceptorInterface> */
     private array $interceptors;
@@ -78,7 +76,7 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
     public function handle(CallableContextInterface $context): mixed
     {
         return ($this->composed ??= ChainComposer::compose($this->interceptors, $this->contextHandler))
-            ->handle($this->normalizeContext($context));
+            ->handle($context);
     }
 
     /**
@@ -91,24 +89,7 @@ final class InterceptingExecutor implements CallableExecutorInterface, PipelineI
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
         return ChainComposer::compose($this->interceptors, $handler)
-            ->handle($this->normalizeContext($context));
-    }
-
-    private function normalizeContext(CallableContextInterface $context): CallableContextInterface
-    {
-        $callable = $context->getCallable();
-        if (!$callable instanceof PreparedCallable) {
-            return $context;
-        }
-
-        do {
-            $callable = $callable->callable;
-        } while ($callable instanceof PreparedCallable);
-
-        return new ResolvedCallableContext(
-            $context->withCallable($callable, [...$context->parameters]),
-            nativeArguments: true,
-        );
+            ->handle($context);
     }
 
     public function pipe(InterceptorInterface ...$interceptor): self

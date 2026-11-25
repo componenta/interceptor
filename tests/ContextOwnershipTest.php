@@ -82,7 +82,7 @@ it('does not let a reflector change the target metadata of a context or later co
         ->toBe(OwnershipFirstTarget::class);
 });
 
-it('does not retain mutable fallback reflectors for magic dispatch', function (): void {
+it('does not invent a concrete declaration for native magic dispatch', function (): void {
     $target = new class {
         public function __call(string $name, array $args): string
         {
@@ -90,10 +90,7 @@ it('does not retain mutable fallback reflectors for magic dispatch', function ()
         }
     };
     $context = new CallableContext([$target, 'virtual']);
-    $reflector = $context->reflector;
-    $reflector->__construct('strlen');
-
-    expect($context->reflector->getName())->toBe('virtual')
+    expect($context->reflector)->toBeNull()
         ->and(($context->getCallable())())->toBe('virtual');
 });
 

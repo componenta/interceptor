@@ -7,7 +7,6 @@ namespace Componenta\Interceptor;
 use Closure;
 use Componenta\DI\CallableInvokerInterface;
 use Componenta\DI\PreparedCallable;
-use Componenta\Interceptor\Internal\ResolvedCallableContext;
 use Throwable;
 
 /**
@@ -45,7 +44,7 @@ final readonly class ContextHandler implements ContextHandlerInterface
      */
     public function handle(CallableContextInterface $context): mixed
     {
-        if ($context instanceof ResolvedCallableContext) {
+        if ($context->prepared) {
             return $this->executor->call(new PreparedCallable($context->getCallable()), $context->invocationArguments());
         }
 
@@ -60,6 +59,6 @@ final readonly class ContextHandler implements ContextHandlerInterface
                 : [substr($callable, 0, $separator), substr($callable, $separator + 2)];
         }
 
-        return $this->executor->call($callable, $context->parameters);
+        return $this->executor->call($callable, $context->invocationArguments());
     }
 }

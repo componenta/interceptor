@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Componenta\Interceptor;
 
 use Componenta\DI\Resolver\Parameter\ParametersResolver;
-use Componenta\Interceptor\Internal\ResolvedCallableContext;
 
 /**
  * Resolves callable parameters through DI before delegating downstream.
@@ -27,17 +26,15 @@ final readonly class ParameterResolvingInterceptor implements InterceptorInterfa
 
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
-        if ($context instanceof ResolvedCallableContext) {
+        if ($context->prepared) {
             return $handler->handle($context);
         }
 
-        $parameters = $context->reflector->getParameters();
+        $reflector = $context->reflector;
+        $parameters = $reflector === null
+            ? $context->parameters
+            : $this->parametersResolver->resolve($reflector->getParameters(), $context->parameters);
 
-        if ($parameters !== []) {
-            $resolved = $this->parametersResolver->resolve($parameters, $context->parameters);
-            $context = new ResolvedCallableContext($context->withParameters($resolved), nativeArguments: true);
-        }
-
-        return $handler->handle($context);
+        return $handler->handle($context->withPreparedParameters($parameters));
     }
 }

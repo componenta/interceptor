@@ -77,7 +77,7 @@ $context = $context
     ->withAttribute('trace.id', $traceId);
 ```
 
-Reflection is derived from the callable; the constructor no longer accepts an external `reflector` argument. Remove that argument when migrating existing contexts.
+Reflection is derived from the native callable. The `reflector` property is `null` for native magic dispatch without a concrete declaration.
 
 ### Pipeline
 
@@ -183,7 +183,7 @@ Build interceptors from closures without dedicated classes:
 ```php
 use Componenta\Interceptor\CallbackInterceptorFactory as F;
 
-$logger   = F::before(fn ($ctx) => $log->info('calling ' . $ctx->reflector->name));
+$logger   = F::before(fn ($ctx) => $log->info('calling ' . ($ctx->reflector?->name ?? 'dynamic callable')));
 $envelope = F::after(fn ($result) => ['data' => $result]);
 $recover  = F::catch(fn (\Throwable $e) => ['error' => $e->getMessage()]);
 $cleanup  = F::finally(fn () => $this->releaseLock());
@@ -215,11 +215,11 @@ Parameter attributes run once during this preparation. The terminal passes prepa
 
 Reading, updating and removing a prepared fixed parameter by name or position address the same argument. Explicit null parameters and context attributes remain null even when a fallback is supplied; the fallback applies only to absent keys.
 
-PreparedCallable is recognized by call(), handle() and intercept(), including contexts created by CallableContextFactory. Nested adapters are unwrapped to the original callable. These entry points preserve context attributes and the original callable metadata without resolving its parameters again.
+`CallableContext` recognizes `PreparedCallable` during construction and `withCallable()`, unwraps nested adapters, and exposes the native target through `getCallable()`. The public `prepared` property indicates that parameters are final. `withPreparedParameters()` creates a context with a complete native argument list; `invocationArguments()` provides the argument vector for the invoker. Parameter preparation and terminal invocation depend on the context contract rather than its implementation.
 
 PreparedCallable arguments follow native PHP binding: integer keys bind in insertion order, while string keys bind by name. Untouched arguments retain native binding errors. Editing parameters through the context switches to logical name/position binding, so removing a fixed argument preserves the positions of its neighbours.
 
-Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with withCallable() starts ordinary DI resolution for the new target. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor. A string that has already been selected as a native callable is invoked as a native function or method rather than being looked up as another service ID.
+Prepared parameters are final invocation values: updates by name or position replace the corresponding argument, and omitted optional arguments use PHP defaults. DI does not refill arguments removed after preparation. Replacing the callable with `withCallable()` starts ordinary DI resolution for the new target unless a `PreparedCallable` is supplied. A pipeline without ParameterResolvingInterceptor continues to invoke its target through the configured DI executor. A string that has already been selected as a native callable is invoked as a native function or method rather than being looked up as another service ID.
 
 Prepared arguments and top-level context slots are passed by value; by-reference parameter mutation is not supported by this pipeline. Use DI's native `CallableInvoker` for explicit reference-bearing arguments. To share context attributes across nested pipelines, compose them with `pipe()`; the DI executor's `call()` boundary carries only the callable and arguments.
 

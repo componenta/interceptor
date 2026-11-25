@@ -4,106 +4,92 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\DI\PreparedCallable;
+use Componenta\Interceptor\Internal\ArgumentBinding;
+use Componenta\Interceptor\Internal\ArgumentMode;
 use Componenta\Interceptor\Internal\ArraySlots;
 use Componenta\Interceptor\Internal\NativeCallable;
 use Componenta\Reflection\Reflection;
 use Componenta\Scope\ScopeInterface;
-use Componenta\Scope\ScopedInterface;
-use Closure;
 use InvalidArgumentException;
-use ReflectionFunction;
 use ReflectionFunctionAbstract;
 
-/**
- * Immutable implementation of {@see CallableContextInterface}.
- *
- * Encapsulates a callable along with its parameters and attributes,
- * providing lazy reflection resolution for performance.
- *
- */
+/** Immutable invocation context with value-owned top-level argument and attribute slots. */
 final class CallableContext implements CallableContextInterface
 {
     public const string SCOPE_ATTRIBUTE = 'interceptor.scope';
 
-    /**
-     * Cached reflection instance, lazily initialized.
-     */
-    private ?ReflectionFunctionAbstract $reflectorCache = null;
+    /** @var callable */
+    private readonly mixed $callable;
+    /** @var array<string|int, mixed> */
+    private array $argumentSlots;
+    /** @var array<string, mixed> */
+    private array $attributeSlots;
+    private ArgumentMode $mode;
+    private bool $reflectionResolved = false;
+    private ?ReflectionFunctionAbstract $reflection = null;
 
-    /**
-     * Reflection of the callable.
-     *
-     * Lazily resolved on first access using {@see Reflection::callable()}.
-     */
-    public ReflectionFunctionAbstract $reflector {
-        get => $this->resolveReflector();
+    public array $parameters {
+        get => $this->argumentSlots;
+    }
+
+    public array $attributes {
+        get => $this->attributeSlots;
+    }
+
+    public bool $prepared {
+        get => $this->mode !== ArgumentMode::Supplied;
+    }
+
+    public ?ReflectionFunctionAbstract $reflector {
+        get => $this->resolveReflection();
     }
 
     /**
-     * The encapsulated callable.
-     *
-     * @var callable
-     */
-    private readonly mixed $callable;
-
-    /** @var array<string|int, mixed> */
-    public readonly array $parameters;
-
-    /** @var array<string, mixed> */
-    public readonly array $attributes;
-
-    /**
-     * Creates a new callable context.
-     *
-     * @param callable $callable The callable to encapsulate.
-     * @param array<string|int, mixed> $parameters Parameters for invocation.
-     * @param array<string, mixed> $attributes Arbitrary attributes.
+     * @param callable $callable
+     * @param array<string|int, mixed> $parameters
+     * @param array<string, mixed> $attributes
      */
     public function __construct(
         callable|string|array $callable,
         array $parameters = [],
         array $attributes = [],
     ) {
-        // Snapshot the public data before target validation can run application autoloaders.
-        $this->parameters = ArraySlots::snapshot($parameters);
-        $this->attributes = ArraySlots::snapshot($attributes);
-        $this->callable = NativeCallable::capture($callable);
-    }
+        $parameters = ArraySlots::snapshot($parameters);
+        $attributes = ArraySlots::snapshot($attributes);
+        $mode = ArgumentMode::Supplied;
 
-    private function resolveReflector(): ReflectionFunctionAbstract
-    {
-        try {
-            // Reflection 3 provides guarded cached handles.
-            return $this->reflectorCache ??= Reflection::callable($this->callable);
-        } catch (InvalidArgumentException) {
-            // Magic dispatch has no concrete declaration. Never cache or share
-            // this mutable native fallback with callers or context copies.
-            return new ReflectionFunction(Closure::fromCallable($this->callable));
+        while ($callable instanceof PreparedCallable) {
+            $mode = ArgumentMode::Native;
+            $callable = $callable->callable;
         }
+
+        // Initialize the readonly target before publishing any new mutable fields.
+        $this->callable = NativeCallable::capture($callable);
+        $this->mode = $mode;
+        $this->argumentSlots = $mode === ArgumentMode::Native ? [...$parameters] : $parameters;
+        $this->attributeSlots = $attributes;
     }
 
-    /** @param array<string|int, mixed> $parameters
-     *  @param array<string, mixed> $attributes
-     */
-    private function copy(array $parameters, array $attributes): self
+    private function resolveReflection(): ?ReflectionFunctionAbstract
     {
-        $copy = new self($this->callable, $parameters, $attributes);
-        $copy->reflectorCache = $this->reflectorCache;
-        return $copy;
+        if (!$this->reflectionResolved) {
+            try {
+                $this->reflection = Reflection::callable($this->callable);
+            } catch (InvalidArgumentException) {
+                // Reflection's public contract excludes native magic dispatch.
+                $this->reflection = null;
+            }
+            $this->reflectionResolved = true;
+        }
+
+        return $this->reflection;
     }
 
     /**
-     * Creates a context tagged with an execution scope.
-     *
-     * Convenience wrapper for entry-points (HTTP middleware, console command dispatchers,
-     * queue message handlers) that build a context and must signal their scope for
-     * {@see ScopedInterface}-aware interceptors. Any {@see self::SCOPE_ATTRIBUTE}
-     * entry already present in $attributes is overwritten by $scope.
-     *
-     * @param ScopeInterface $scope Execution scope marker.
-     * @param callable $callable The callable to encapsulate.
-     * @param array<string|int, mixed> $parameters Parameters for invocation.
-     * @param array<string, mixed> $attributes Arbitrary attributes.
+     * @param callable $callable
+     * @param array<string|int, mixed> $parameters
+     * @param array<string, mixed> $attributes
      */
     public static function scoped(
         ScopeInterface $scope,
@@ -111,116 +97,105 @@ final class CallableContext implements CallableContextInterface
         array $parameters = [],
         array $attributes = [],
     ): self {
-        return new self(
-            $callable,
-            $parameters,
-            [...$attributes, self::SCOPE_ATTRIBUTE => $scope],
-        );
+        return new self($callable, $parameters, [...$attributes, self::SCOPE_ATTRIBUTE => $scope]);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getCallable(): callable
     {
         return $this->callable;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getAttribute(string $name, mixed $default = null): mixed
     {
-        return array_key_exists($name, $this->attributes) ? $this->attributes[$name] : $default;
+        return array_key_exists($name, $this->attributeSlots) ? $this->attributeSlots[$name] : $default;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withAttribute(string $name, mixed $value): CallableContextInterface
+    public function withAttributes(array $attributes): self
     {
-        $attributes = array_replace($this->attributes, [$name => $value]);
-
-        $copy = $this->copy($this->parameters, $attributes);
-
+        $copy = clone $this;
+        $copy->attributeSlots = ArraySlots::snapshot($attributes);
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withoutAttribute(string $name): CallableContextInterface
+    public function withAttribute(string $name, mixed $value): self
     {
-        $attributes = $this->attributes;
-        unset($attributes[$name]);
-
-        $copy = $this->copy($this->parameters, $attributes);
-
+        $copy = clone $this;
+        $copy->attributeSlots[$name] = $value;
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withAttributes(array $attributes): CallableContextInterface
+    public function withoutAttribute(string $name): self
     {
-        $copy = $this->copy($this->parameters, $attributes);
-
+        $copy = clone $this;
+        unset($copy->attributeSlots[$name]);
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withParameters(array $parameters): CallableContextInterface
+    public function withPreparedParameters(array $parameters): self
     {
-        $copy = $this->copy($parameters, $this->attributes);
-
+        $copy = clone $this;
+        $copy->argumentSlots = [...ArraySlots::snapshot($parameters)];
+        $copy->mode = ArgumentMode::Native;
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
+    public function invocationArguments(): array
+    {
+        return $this->mode === ArgumentMode::Logical
+            ? ArgumentBinding::native($this->reflector, $this->argumentSlots)
+            : $this->argumentSlots;
+    }
+
+    public function withParameters(array $parameters): self
+    {
+        $copy = clone $this;
+        $copy->argumentSlots = ArraySlots::snapshot($parameters);
+        if ($copy->prepared) {
+            $copy->mode = ArgumentMode::Logical;
+        }
+        return $copy;
+    }
+
     public function getParameter(string|int $key, mixed $default = null): mixed
     {
-        return array_key_exists($key, $this->parameters) ? $this->parameters[$key] : $default;
+        $key = $this->parameterKey($key);
+        return array_key_exists($key, $this->argumentSlots) ? $this->argumentSlots[$key] : $default;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withParameter(string|int $key, mixed $value): CallableContextInterface
+    public function withParameter(string|int $key, mixed $value): self
     {
-        $parameters = array_replace($this->parameters, [$key => $value]);
-
-        $copy = $this->copy($parameters, $this->attributes);
-
+        $key = $this->parameterKey($key);
+        $copy = clone $this;
+        $copy->argumentSlots[$key] = $value;
+        if ($copy->prepared) {
+            $copy->mode = ArgumentMode::Logical;
+        }
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withoutParameter(string|int $key): CallableContextInterface
+    public function withoutParameter(string|int $key): self
     {
-        $parameters = $this->parameters;
-        unset($parameters[$key]);
-
-        $copy = $this->copy($parameters, $this->attributes);
-
+        $copy = clone $this;
+        if ($copy->prepared) {
+            $copy->argumentSlots = ArgumentBinding::remove($this->reflector, $this->argumentSlots, $key);
+            $copy->mode = ArgumentMode::Logical;
+        } else {
+            unset($copy->argumentSlots[$key]);
+        }
         return $copy;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface
+    private function parameterKey(string|int $key): string|int
+    {
+        return $this->prepared ? ArgumentBinding::key($this->reflector, $this->argumentSlots, $key) : $key;
+    }
+
+    public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): self
     {
         return new self(
             $callable,
-            $parameters ?? $this->parameters,
-            $attributes ?? $this->attributes,
+            $parameters ?? $this->argumentSlots,
+            $attributes ?? $this->attributeSlots,
         );
     }
 }

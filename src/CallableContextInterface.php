@@ -43,14 +43,38 @@ interface CallableContextInterface
      *
      * Provides access to parameter types, attributes, return type, etc.
      * External changes to a returned reflector must not change the callable
-     * metadata observed through the context.
+     * metadata observed through the context. Null means native dispatch has no
+     * concrete declaration (for example, a method handled by __call()).
      */
-    public ReflectionFunctionAbstract $reflector { get; }
+    public ?ReflectionFunctionAbstract $reflector { get; }
 
     /**
-     * Returns the encapsulated callable.
+     * True when the parameters are final invocation values and must not be
+     * passed through dependency resolution again.
+     */
+    public bool $prepared { get; }
+
+    /**
+     * Return the native callable, without any DI PreparedCallable adapters.
      */
     public function getCallable(): callable;
+
+    /**
+     * Replace the parameters with a complete native argument list, marking
+     * them as prepared. Integer keys bind in insertion order.
+     *
+     * @param array<string|int, mixed> $parameters
+     */
+    public function withPreparedParameters(array $parameters): CallableContextInterface;
+
+    /**
+     * Return the parameters to pass to the configured invoker. For a prepared
+     * context this is a native PHP argument vector, including any logical edits.
+     * For an unprepared context these are the supplied DI arguments.
+     *
+     * @return array<string|int, mixed>
+     */
+    public function invocationArguments(): array;
 
     /**
      * Creates a new context with the given attributes, replacing all existing ones.
@@ -123,7 +147,8 @@ interface CallableContextInterface
     /**
      * Creates a new context with a different callable.
      *
-     * Replaces the callable and resets the cached reflector.
+     * Replaces the target and resets argument preparation. A DI PreparedCallable
+     * explicitly marks the replacement parameters as already prepared.
      * If parameters or attributes are null, they are inherited from the current context.
      *
      * @warning Inheriting parameters when the callable changes may pass arguments
@@ -134,5 +159,5 @@ interface CallableContextInterface
      * @param array<string|int, mixed>|null $parameters New parameters, or null to keep current.
      * @param array<string, mixed>|null $attributes New attributes, or null to keep current.
      */
-    public function withCallable(callable $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface;
+    public function withCallable(callable|string|array $callable, ?array $parameters = null, ?array $attributes = null): CallableContextInterface;
 }

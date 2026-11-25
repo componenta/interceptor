@@ -29,6 +29,9 @@ final class AttributeInterceptor implements InterceptorInterface
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
         $reflector = $context->reflector;
+        if ($reflector === null) {
+            return $handler->handle($context);
+        }
         $signature = AttributeMetadata::signature($reflector);
         $attributes = $signature === null ? null : ($this->attributes[$signature] ?? null);
         if ($attributes === null) {

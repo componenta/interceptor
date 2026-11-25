@@ -186,18 +186,17 @@ final class PreparedInvocationTarget
     }
 }
 
-it('preserves method interception with source and prepared metadata after parameter resolution', function (bool $prepared): void {
+it('preserves method interception after parameter resolution', function (): void {
     $container = preparedInvocationContainer();
     $attributes = new \Componenta\Interceptor\AttributeInterceptor(
         $container->get(\Componenta\DI\FactoryInterface::class),
-        $prepared ? [PreparedInvocationTarget::class . '::run' => [0]] : [],
     );
     $pipeline = $container->get(PipelineInterface::class)->pipe($attributes);
     $context = new CallableContext([new PreparedInvocationTarget(), 'run'], ['value' => 'value']);
 
     expect($pipeline->handle($context))->toBe('value!:value!')
         ->and($pipeline->handle($context))->toBe('value!:value!');
-})->with(['source' => [false], 'prepared' => [true]]);
+});
 
 
 it('uses PHP defaults when an interceptor removes a prepared optional argument', function (string|int $key, bool $named = false): void {
@@ -396,7 +395,8 @@ it('preserves prepared callables across public pipeline entry points', function 
     expect($invoke())->toBe($expected)
         ->and($invoke())->toBe($expected)
         ->and($traces)->toBe($entry === 'call' ? [null, null] : ['kept', 'kept'])
-        ->and($context->getCallable())->toBe($prepared)
+        ->and($context->getCallable())->toBe($callable)
+        ->and($context->prepared)->toBeTrue()
         ->and($context->parameters)->toBe(['value' => 'prepared!']);
 })->with([
     'call' => ['call', false],
@@ -508,4 +508,29 @@ it('binds a positional variadic value added after named variadic arguments', fun
     expect($container->get(PipelineInterface::class)->handle(
         new CallableContext($prepared, ['first' => 'value', 'named' => 'last']),
     ))->toBe(['value', ['tail', 'named' => 'last']]);
+});
+
+it('recognizes an already prepared replacement target inside the chain', function (): void {
+    $replacement = new PreparedInvocationTarget();
+    $container = preparedInvocationContainer(
+        CallbackInterceptorFactory::before(
+            static fn (CallableContextInterface $context): CallableContextInterface =>
+                $context->withCallable(new \Componenta\DI\PreparedCallable([$replacement, 'run']), ['value' => 'ready']),
+        ),
+    );
+    $pipeline = $container->get(PipelineInterface::class)
+        ->pipe($container->get(\Componenta\Interceptor\AttributeInterceptor::class));
+
+    expect($pipeline->call(static fn (): string => 'original'))->toBe('ready:ready');
+});
+
+it('lets a context explicitly mark a complete invocation vector as prepared', function (): void {
+    $container = preparedInvocationContainer();
+    $original = new CallableContext(static fn (#[InvocationSuffix] string $value): string => $value, ['value' => 'input']);
+    $prepared = $original->withPreparedParameters(['value' => 'ready']);
+
+    expect($original->prepared)->toBeFalse()
+        ->and($prepared->prepared)->toBeTrue()
+        ->and($container->get(PipelineInterface::class)->handle($original))->toBe('input!')
+        ->and($container->get(PipelineInterface::class)->handle($prepared))->toBe('ready');
 });
