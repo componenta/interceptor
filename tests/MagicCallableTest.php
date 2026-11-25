@@ -61,3 +61,20 @@ it('does not silently repair an untouched invalid native magic argument vector',
 
     expect(fn () => $pipeline->handle($context))->toThrow(Error::class);
 });
+
+
+it('preserves logical magic arguments when replacing the target with an ordinary magic callable', function (): void {
+    $composition = (new ConfigFactory())->create(new Environment([]), new ConfigProvider());
+    $container = (new ContainerFactory())->create($composition->config, $composition->dependencies);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $target = new MagicInterceptionTarget();
+    $context = new \Componenta\Interceptor\CallableContext(
+        new \Componenta\DI\PreparedCallable([$target, 'original']),
+        ['named' => 'last'],
+    );
+    $edited = $context->withParameter(0, 'first');
+    $replacement = $edited->withCallable([$target, 'replacement']);
+
+    expect($pipeline->handle($replacement))->toBe(['replacement', ['first', 'named' => 'last']])
+        ->and($pipeline->handle($edited))->toBe(['original', ['first', 'named' => 'last']]);
+});

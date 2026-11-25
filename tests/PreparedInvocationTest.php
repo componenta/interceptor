@@ -610,3 +610,51 @@ it('adds a missing fixed argument by name or declaration position in a prepared 
         ->and($pipeline->handle($edited))->toBe(['added', 'kept'])
         ->and($pipeline->handle($context))->toBe(['default', 'kept']);
 })->with(['name' => ['first'], 'position' => [0]]);
+
+
+it('preserves inherited variadic values when a prepared target is replaced by a DI-resolved target', function (array $arguments, bool $logical, array $expected): void {
+    $original = static fn (string $first = 'original-default', string ...$rest): array => [$first, $rest];
+    $replacement = static fn (#[InvocationSuffix] string $first = 'replacement-default', string ...$rest): array => [$first, $rest];
+    $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
+    $context = new CallableContext(new \Componenta\DI\PreparedCallable($original), $arguments);
+    if ($logical) {
+        // The numeric slots describe positions, not a packed invocation list.
+        $context = $context->withoutParameter('first');
+    }
+    $changed = $context->withCallable($replacement);
+
+    expect($changed->prepared)->toBeFalse()
+        ->and($pipeline->handle($changed))->toBe($expected)
+        ->and($pipeline->handle($changed))->toBe($expected);
+})->with([
+    'named variadic arguments' => [
+        ['first' => 'value', 'named' => 'tail'],
+        false,
+        ['value!', ['named' => 'tail']],
+    ],
+    'mixed native variadic arguments' => [
+        ['value', 'tail', 'rest' => 'literal-name', 'named' => 'last'],
+        false,
+        ['value!', ['tail', 'rest' => 'literal-name', 'named' => 'last']],
+    ],
+    'logical omitted fixed argument' => [
+        ['value', 'tail', 'named' => 'last'],
+        true,
+        ['replacement-default!', ['tail', 'named' => 'last']],
+    ],
+    'positional control' => [
+        ['value', 'tail'],
+        false,
+        ['value!', ['tail']],
+    ],
+]);
+
+it('leaves explicitly supplied DI arguments in their supplied format when replacing a prepared target', function (): void {
+    $original = static fn (string ...$values): array => $values;
+    $replacement = static fn (string ...$values): array => $values;
+    $pipeline = preparedInvocationContainer()->get(PipelineInterface::class, PipelineInterface::class);
+    $context = new CallableContext(new \Componenta\DI\PreparedCallable($original), ['old', 'named' => 'old']);
+    $changed = $context->withCallable($replacement, ['values' => ['new', 'named' => 'new']]);
+
+    expect($pipeline->handle($changed))->toBe(['new', 'named' => 'new']);
+});
