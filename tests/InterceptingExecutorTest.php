@@ -163,3 +163,47 @@ describe('intercept() - nested usage', function () {
         ]);
     });
 });
+
+it('delegates an empty nested pipeline to the supplied continuation exactly once', function (): void {
+    $calls = 0;
+    $terminal = new class($calls) implements ContextHandlerInterface {
+        public function __construct(private int &$calls) {}
+        public function handle(CallableContextInterface $context): mixed
+        {
+            ++$this->calls;
+            return $context->getAttribute('trace');
+        }
+    };
+    $context = new CallableContext(static fn (): never => throw new LogicException('Do not invoke the target.'), attributes: ['trace' => 'kept']);
+
+    expect(intercepting()->intercept($context, $terminal))->toBe('kept')
+        ->and($calls)->toBe(1);
+});
+
+it('preserves the original failure and permits a subsequent call on the same composed pipeline', function (): void {
+    $failure = new DomainException('failed');
+    $pipeline = intercepting(\Componenta\Interceptor\CallbackInterceptorFactory::after(static fn (string $result): string => 'after:' . $result));
+    $caught = null;
+    try {
+        $pipeline->call(static fn (): never => throw $failure);
+    } catch (DomainException $error) {
+        $caught = $error;
+    }
+
+    expect($caught)->toBe($failure)
+        ->and($pipeline->call(static fn (): string => 'recovered'))->toBe('after:recovered');
+});
+
+it('keeps invocation contexts separate during recursive use of the same pipeline', function (): void {
+    $pipeline = intercepting(\Componenta\Interceptor\CallbackInterceptorFactory::around(
+        static fn (CallableContextInterface $context): CallableContextInterface =>
+            $context->withAttribute('marker', $context->getParameter('label')),
+        static fn (string $result, CallableContextInterface $context): string =>
+            $context->getAttribute('marker') . ':' . $result,
+    ));
+    $inner = static fn (string $label): string => $label;
+    $outer = static fn (string $label): string => $pipeline->call($inner, ['label' => 'inner']) . ':' . $label;
+
+    expect($pipeline->call($outer, ['label' => 'outer']))->toBe('outer:inner:inner:outer')
+        ->and($pipeline->call($inner, ['label' => 'next']))->toBe('next:next');
+});

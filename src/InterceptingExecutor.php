@@ -6,6 +6,7 @@ namespace Componenta\Interceptor;
 
 use Componenta\DI\CallableExecutorInterface;
 use Componenta\Interceptor\Internal\ArraySlots;
+use Componenta\Interceptor\Internal\InterceptorHandler;
 use Throwable;
 
 /**
@@ -75,7 +76,7 @@ final class InterceptingExecutor implements PipelineInterface
      */
     public function handle(CallableContextInterface $context): mixed
     {
-        return ($this->composed ??= ChainComposer::compose($this->interceptors, $this->contextHandler))
+        return ($this->composed ??= $this->compose($this->contextHandler))
             ->handle($context);
     }
 
@@ -88,8 +89,18 @@ final class InterceptingExecutor implements PipelineInterface
      */
     public function intercept(CallableContextInterface $context, ContextHandlerInterface $handler): mixed
     {
-        return ChainComposer::compose($this->interceptors, $handler)
+        return $this->compose($handler)
             ->handle($context);
+    }
+
+    private function compose(ContextHandlerInterface $terminal): ContextHandlerInterface
+    {
+        $handler = $terminal;
+        for ($i = count($this->interceptors) - 1; $i >= 0; --$i) {
+            $handler = new InterceptorHandler($this->interceptors[$i], $handler);
+        }
+
+        return $handler;
     }
 
     public function pipe(InterceptorInterface ...$interceptor): self
