@@ -26,3 +26,38 @@ it('preserves native magic callable argument binding through the configured pipe
     expect($container->get(PipelineInterface::class)->call([new MagicInterceptionTarget(), 'missing'], ['named' => 'value']))
         ->toBe(['missing', ['named' => 'value']]);
 });
+
+it('keeps logical positional edits before named values on native magic dispatch', function (bool $prepared): void {
+    $composition = (new ConfigFactory())->create(
+        new Environment([]),
+        new ConfigProvider(),
+    );
+    $container = (new ContainerFactory())->create($composition->config, $composition->dependencies);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $target = [new MagicInterceptionTarget(), 'missing'];
+    $context = new \Componenta\Interceptor\CallableContext(
+        $prepared ? new \Componenta\DI\PreparedCallable($target) : $target,
+        ['named' => 'last'],
+    );
+    $pipeline = $pipeline->pipe(
+        \Componenta\Interceptor\CallbackInterceptorFactory::before(
+            static fn (\Componenta\Interceptor\CallableContextInterface $context): \Componenta\Interceptor\CallableContextInterface =>
+                $context->withParameter(0, 'first')->withParameter(2, 'second'),
+        ),
+    );
+
+    expect($pipeline->handle($context))->toBe(['missing', ['first', 'second', 'named' => 'last']])
+        ->and($context->parameters)->toBe(['named' => 'last']);
+})->with(['DI preparation' => [false], 'prepared invocation' => [true]]);
+
+it('does not silently repair an untouched invalid native magic argument vector', function (): void {
+    $composition = (new ConfigFactory())->create(new Environment([]), new ConfigProvider());
+    $container = (new ContainerFactory())->create($composition->config, $composition->dependencies);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $context = new \Componenta\Interceptor\CallableContext(
+        new \Componenta\DI\PreparedCallable([new MagicInterceptionTarget(), 'missing']),
+        ['named' => 'last', 0 => 'first'],
+    );
+
+    expect(fn () => $pipeline->handle($context))->toThrow(Error::class);
+});

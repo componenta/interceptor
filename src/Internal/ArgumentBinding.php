@@ -84,13 +84,9 @@ final class ArgumentBinding
      */
     public static function native(?ReflectionFunctionAbstract $reflector, array $remaining): array
     {
-        if ($reflector === null) {
-            return $remaining;
-        }
-
         $fixed = [];
         $declarations = [];
-        foreach ($reflector->getParameters() as $parameter) {
+        foreach ($reflector?->getParameters() ?? [] as $parameter) {
             if ($parameter->isVariadic()) {
                 break;
             }
@@ -131,7 +127,7 @@ final class ArgumentBinding
                 throw new ArgumentCountError(sprintf(
                     'Missing required argument $%s for %s.',
                     $name,
-                    $reflector->getName(),
+                    $reflector?->getName() ?? 'callable',
                 ));
             }
         }

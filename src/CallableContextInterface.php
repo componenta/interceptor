@@ -74,7 +74,9 @@ interface CallableContextInterface
     /**
      * Return the parameters to pass to the configured invoker. For a prepared
      * context this is a native PHP argument vector, including any logical edits.
-     * For an unprepared context these are the supplied DI arguments.
+     * For an unprepared context these are the supplied DI arguments. Logical
+     * edits of magic-call arguments preserve positional and named values but
+     * cannot identify fixed parameters by declaration name.
      *
      * @return array<string|int, mixed>
      */
