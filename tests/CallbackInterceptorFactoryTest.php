@@ -147,3 +147,43 @@ describe('around()', function () {
         expect($result)->toBe('around-set:value');
     });
 });
+
+final class CapturedCallbackTarget
+{
+    public function __construct(private string $name) {}
+
+    public function before(CallableContextInterface $context): CallableContextInterface
+    {
+        return $context->withAttribute('owner', $this->name);
+    }
+
+    public function after(mixed $result, CallableContextInterface $context): string
+    {
+        return $this->name . ':' . $context->getAttribute('owner') . ':' . $result;
+    }
+
+    public function full(CallableContextInterface $context, ContextHandlerInterface $handler): string
+    {
+        return $this->name . ':' . $handler->handle($context);
+    }
+}
+
+it('captures the callback target instead of keeping mutable callable array slots', function (): void {
+    $owner = new CapturedCallbackTarget('first');
+    $method = 'full';
+    $interceptor = CallbackInterceptorFactory::create([&$owner, &$method]);
+
+    $owner = new CapturedCallbackTarget('second');
+    $method = 'missing';
+
+    expect(runWith($interceptor, static fn (): string => 'value'))->toBe('first:value');
+});
+
+it('captures both callbacks of an around interceptor independently of caller references', function (): void {
+    $owner = new CapturedCallbackTarget('first');
+    $interceptor = CallbackInterceptorFactory::around([&$owner, 'before'], [&$owner, 'after']);
+
+    $owner = new CapturedCallbackTarget('second');
+
+    expect(runWith($interceptor, static fn (): string => 'value'))->toBe('first:first:value');
+});

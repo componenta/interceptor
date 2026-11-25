@@ -132,7 +132,8 @@ it('captures arguments and attributes before callable validation runs applicatio
 });
 
 it('does not grant access to private implementation methods via native callable specifications', function (bool $array): void {
-    $target = $array ? [CallableContext::class, 'resolveReflector'] : CallableContext::class . '::resolveReflector';
+    $context = new CallableContext(static fn (): null => null);
+    $target = $array ? [$context, 'resolveReflector'] : CallableContext::class . '::resolveReflector';
 
     expect(fn () => new CallableContext($target))->toThrow(TypeError::class);
 })->with([false, true]);

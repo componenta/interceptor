@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
+use Componenta\Interceptor\Internal\NativeCallable;
+
 /**
  * Factory for creating interceptors from callbacks.
  *
@@ -44,7 +46,7 @@ final class CallbackInterceptorFactory
      *
      * @param callable(CallableContextInterface, ContextHandlerInterface): mixed $callback
      */
-    public static function create(callable $callback): InterceptorInterface
+    public static function create(callable|string|array $callback): InterceptorInterface
     {
         return new CallbackInterceptor($callback);
     }
@@ -57,8 +59,9 @@ final class CallbackInterceptorFactory
      *
      * @param callable(CallableContextInterface): ?CallableContextInterface $callback
      */
-    public static function before(callable $callback): InterceptorInterface
+    public static function before(callable|string|array $callback): InterceptorInterface
     {
+        $callback = NativeCallable::capture($callback);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($callback): mixed {
                 $modified = $callback($context);
@@ -74,8 +77,9 @@ final class CallbackInterceptorFactory
      *
      * @param callable(mixed, CallableContextInterface): mixed $callback
      */
-    public static function after(callable $callback): InterceptorInterface
+    public static function after(callable|string|array $callback): InterceptorInterface
     {
+        $callback = NativeCallable::capture($callback);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($callback): mixed {
                 $result = $handler->handle($context);
@@ -89,8 +93,9 @@ final class CallbackInterceptorFactory
      *
      * @param callable(\Throwable, CallableContextInterface): mixed $callback Exception handler.
      */
-    public static function catch(callable $callback): InterceptorInterface
+    public static function catch(callable|string|array $callback): InterceptorInterface
     {
+        $callback = NativeCallable::capture($callback);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($callback): mixed {
                 try {
@@ -107,8 +112,9 @@ final class CallbackInterceptorFactory
      *
      * @param callable(CallableContextInterface): void $callback
      */
-    public static function finally(callable $callback): InterceptorInterface
+    public static function finally(callable|string|array $callback): InterceptorInterface
     {
+        $callback = NativeCallable::capture($callback);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($callback): mixed {
                 try {
@@ -126,8 +132,10 @@ final class CallbackInterceptorFactory
      * @param callable(CallableContextInterface): ?CallableContextInterface $before
      * @param callable(mixed, CallableContextInterface): mixed $after
      */
-    public static function around(callable $before, callable $after): InterceptorInterface
+    public static function around(callable|string|array $before, callable|string|array $after): InterceptorInterface
     {
+        $before = NativeCallable::capture($before);
+        $after = NativeCallable::capture($after);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($before, $after): mixed {
                 $modified = $before($context);
