@@ -6,7 +6,7 @@ use Componenta\Config\DependencyDefinitions;
 use Componenta\Config\Environment;
 use Componenta\DI\CallableExecutorInterface;
 use Componenta\DI\ContainerFactory;
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
+use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\ParameterResolvingInterceptor;
 
@@ -18,7 +18,7 @@ function parameterResolutionPipeline(): InterceptingExecutor
     $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
     return new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
-        new ParameterResolvingInterceptor($container->get(ParametersResolver::class, ParametersResolver::class)->resolve(...))
+        new ParameterResolvingInterceptor($container->get(ParametersResolverInterface::class, ParametersResolverInterface::class)->resolve(...))
     );
 }
 it('preserves calls without parameters', function (): void {

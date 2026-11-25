@@ -6,7 +6,7 @@
     "require": {
         "php": "^8.5.13",
         "componenta/config": "^3.0.0",
-        "componenta/di": "^6.0@dev",
+        "componenta/di": "dev-refactor/di6-parameter-resolution-contract as 6.0.x-dev",
         "componenta/reflection": "^3.0",
         "componenta/scope": "^1.0"
     },
@@ -57,9 +57,15 @@
             "Composer\\Config::disableProcessTimeout",
             "@php vendor/bin/phpbench run --config=phpbench.json.dist --report=aggregate --report=env"
         ],
-        "bench:smoke": "@php vendor/bin/phpbench run --config=phpbench.json.dist --revs=1 --iterations=1 --warmup=0 --report=aggregate",
+        "bench:smoke": "@php vendor/bin/phpbench run --config=phpbench.json.dist --revs=1 --iterations=1 --report=aggregate",
         "analyse": "@php vendor/bin/phpstan analyse src --level=max",
         "test:coverage": "@php vendor/bin/pest --coverage"
     },
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/componenta/di"
+        }
+    ]
 }

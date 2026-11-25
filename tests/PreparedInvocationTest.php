@@ -117,7 +117,7 @@ it('keeps prepared argument transformations single through a nested pipeline', f
     $nested = new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
         new \Componenta\Interceptor\ParameterResolvingInterceptor(
-            $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolver::class, \Componenta\DI\Resolver\Parameter\ParametersResolver::class)->resolve(...),
+            $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class, \Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class)->resolve(...),
         ),
     );
     $pipeline = $container->get(PipelineInterface::class)->pipe($nested);
@@ -304,7 +304,7 @@ it('lets downstream interceptors read the argument updated by name or position',
 it('preserves a supplied executor pipeline after preparing arguments', function (): void {
     $container = preparedInvocationContainer();
     $resolver = new \Componenta\Interceptor\ParameterResolvingInterceptor(
-        $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolver::class, \Componenta\DI\Resolver\Parameter\ParametersResolver::class)->resolve(...),
+        $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class, \Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class)->resolve(...),
     );
     $inner = new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
@@ -349,7 +349,7 @@ it('preserves executor decoration with DI and native invocation after argument p
     $pipeline = new InterceptingExecutor(
         $executor,
         new \Componenta\Interceptor\ParameterResolvingInterceptor(
-            $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolver::class, \Componenta\DI\Resolver\Parameter\ParametersResolver::class)->resolve(...),
+            $container->get(\Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class, \Componenta\DI\Resolver\Parameter\ParametersResolverInterface::class)->resolve(...),
         ),
     );
     $callable = static fn (#[InvocationSuffix] string $value, string ...$rest): array => [$value, $rest];

@@ -12,7 +12,7 @@ use Componenta\Config\Environment;
 use Componenta\DI\CallableExecutorInterface;
 use Componenta\DI\ContainerFactory;
 use Componenta\DI\FactoryInterface;
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
+use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Componenta\Interceptor\AttributeInterceptor;
 use Componenta\Interceptor\CallableContext;
 use Componenta\Interceptor\CallableContextInterface;
@@ -38,7 +38,7 @@ test('keeps interceptor attributes specific to each closure representation', fun
     $container = (new ContainerFactory())->create(new Config([], new Environment([])), new DependencyDefinitions([]));
     $pipeline = new InterceptingExecutor(
         $container->get(CallableExecutorInterface::class),
-        new ParameterResolvingInterceptor($container->get(ParametersResolver::class, ParametersResolver::class)->resolve(...)),
+        new ParameterResolvingInterceptor($container->get(ParametersResolverInterface::class, ParametersResolverInterface::class)->resolve(...)),
         new AttributeInterceptor($container->get(FactoryInterface::class)),
     );
     $first = #[Envelope('first')] static fn (string $value): string => $value;

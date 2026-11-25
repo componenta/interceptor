@@ -16,7 +16,7 @@ composer require componenta/interceptor
 ## Requirements
 
 - PHP 8.5.13+
-- `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolver`)
+- `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolverInterface`)
 - `componenta/reflection` 3 (lazy reflector resolution)
 - `componenta/config` (optional `ConfigProvider` integration)
 

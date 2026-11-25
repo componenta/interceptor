@@ -6,7 +6,7 @@ namespace Componenta\Interceptor\Factory;
 
 use Componenta\Config\ContainerValue;
 use Componenta\DI\CallableExecutorInterface;
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
+use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Componenta\Interceptor\ConfigKey;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\InterceptorInterface;
@@ -36,7 +36,7 @@ final readonly class HttpInterceptorPipelineFactory
             }
             $resolved[] = $interceptor;
         }
-        $parametersResolver = $container->get(ParametersResolver::class, ParametersResolver::class);
+        $parametersResolver = $container->get(ParametersResolverInterface::class, ParametersResolverInterface::class);
 
         return new InterceptingExecutor(
             $container->get(CallableExecutorInterface::class, CallableExecutorInterface::class),

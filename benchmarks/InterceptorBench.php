@@ -13,7 +13,7 @@ use Componenta\DI\CallableExecutorInterface;
 use Componenta\DI\ContainerFactory;
 use Componenta\DI\FactoryInterface;
 use Componenta\DI\PreparedCallable;
-use Componenta\DI\Resolver\Parameter\ParametersResolver;
+use Componenta\DI\Resolver\Parameter\ParametersResolverInterface;
 use Componenta\Interceptor\Attribute\Intercept;
 use Componenta\Interceptor\AttributeInterceptor;
 use Componenta\Interceptor\CallableContext;
@@ -169,7 +169,7 @@ final class InterceptorBench
                 'nested-pipeline' => $this->nested($executor, $forward, $plain),
                 'di-preparation', 'di-preparation-edit' => $this->preparation(
                     $executor,
-                    $container->get(ParametersResolver::class, ParametersResolver::class),
+                    $container->get(ParametersResolverInterface::class, ParametersResolverInterface::class),
                     $target,
                     $scenario === 'di-preparation-edit',
                 ),
@@ -228,7 +228,7 @@ final class InterceptorBench
     /** @return Closure(): int */
     private function preparation(
         CallableExecutorInterface $executor,
-        ParametersResolver $resolver,
+        ParametersResolverInterface $resolver,
         BenchTarget $target,
         bool $edit,
     ): Closure {
