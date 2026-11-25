@@ -25,7 +25,7 @@ use LogicException;
 use PhpBench\Attributes as Bench;
 
 #[Bench\Iterations(7)]
-#[Bench\Revs(1000)]
+#[Bench\Revs(10000)]
 final class InterceptorBench
 {
     /** @var Closure(): int */
@@ -36,7 +36,9 @@ final class InterceptorBench
     public function provideScenarios(): iterable
     {
         foreach ([
-            'native', 'di', 'pipeline-0', 'pipeline-1', 'pipeline-5', 'pipeline-10', 'pipeline-50',
+            'native', 'di', 'di-dependency', 'di-prepared-vector',
+            'closure-native', 'closure-di', 'closure-pipeline', 'closure-prepared',
+            'pipeline-0', 'pipeline-1', 'pipeline-5', 'pipeline-10', 'pipeline-50',
             'attribute-none', 'attribute-native', 'attribute-factory', 'attribute-five', 'attribute-short-circuit',
             'nested-pipeline', 'di-preparation', 'di-preparation-edit',
             'prepared-native', 'prepared-edit', 'magic-native', 'magic-prepared', 'magic-edit',
@@ -63,6 +65,16 @@ final class InterceptorBench
             $count = (int) substr($scenario, strlen('pipeline-'));
             $pipeline = new InterceptingExecutor($executor, ...array_fill(0, $count, $forward));
             $this->operation = static fn (): int => $pipeline->call($plain, ['value' => 7]);
+        } elseif (str_starts_with($scenario, 'closure-')) {
+            $closure = static fn (int $value): int => $value;
+            $pipeline = new InterceptingExecutor($executor);
+            $prepared = new PreparedCallable($closure);
+            $this->operation = match ($scenario) {
+                'closure-native' => static fn (): int => $closure(7),
+                'closure-di' => static fn (): int => $executor->call($closure, ['value' => 7]),
+                'closure-pipeline' => static fn (): int => $pipeline->call($closure, ['value' => 7]),
+                'closure-prepared' => static fn (): int => $pipeline->call($prepared, [7]),
+            };
         } elseif (str_starts_with($scenario, 'attribute-')) {
             $attributes = new AttributeInterceptor($container->get(FactoryInterface::class, FactoryInterface::class));
             $pipeline = new InterceptingExecutor($executor, $attributes);
@@ -78,6 +90,8 @@ final class InterceptorBench
             $this->operation = match ($scenario) {
                 'native' => static fn (): int => $target->plain(7),
                 'di' => static fn (): int => $executor->call($plain, ['value' => 7]),
+                'di-dependency' => static fn (): int => $executor->call([$target, 'dependency'], ['value' => 7]),
+                'di-prepared-vector' => $this->directPrepared($executor, $target),
                 'nested-pipeline' => $this->nested($executor, $forward, $plain),
                 'di-preparation', 'di-preparation-edit' => $this->preparation(
                     $executor,
@@ -122,7 +136,7 @@ final class InterceptorBench
     #[Bench\ParamProviders('provideScenarios')]
     #[Bench\BeforeMethods('prepareWarm')]
     #[Bench\AfterMethods('verify')]
-    #[Bench\Warmup(100)]
+    #[Bench\Warmup(1000)]
     public function benchRepeatedInvocation(): void
     {
         $this->result = ($this->operation)();
@@ -151,6 +165,14 @@ final class InterceptorBench
             ));
         }
         return static fn (): int => $pipeline->call([$target, 'dependency'], ['value' => $edit ? 5 : 7]);
+    }
+
+    /** @return Closure(): int */
+    private function directPrepared(CallableExecutorInterface $executor, BenchTarget $target): Closure
+    {
+        $prepared = new PreparedCallable([$target, 'variadic']);
+
+        return static fn (): int => $executor->call($prepared, [3, 2, 'last' => 2]);
     }
 
     /** @return Closure(): int */

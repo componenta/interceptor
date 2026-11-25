@@ -55,7 +55,7 @@ try {
         foreach ($xpath->query('./variant', $subject) as $variant) {
             if (!$variant instanceof DOMElement
                 || (int) $variant->getAttribute('revs') !== 1
-                || (int) $variant->getAttribute('warmup') !== ($name === 'benchFirstInvocation' ? 0 : 100)
+                || (int) $variant->getAttribute('warmup') !== ($name === 'benchFirstInvocation' ? 0 : 1000)
                 || $xpath->query('./iteration', $variant)->length !== 1
                 || $xpath->query('./errors/error | ./failures/failure', $variant)->length !== 0
             ) {
