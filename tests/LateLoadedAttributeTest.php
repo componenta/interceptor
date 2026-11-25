@@ -95,3 +95,53 @@ it('rechecks an Intercept subclass that becomes available on a later discovery a
         spl_autoload_unregister($loader);
     }
 });
+
+#[Attribute(Attribute::TARGET_METHOD)]
+final class LinkedFirstAttribute implements \Componenta\Interceptor\InterceptorInterface
+{
+    public function intercept(\Componenta\Interceptor\CallableContextInterface $context, \Componenta\Interceptor\ContextHandlerInterface $handler): mixed
+    {
+        return 'first:' . $handler->handle($context);
+    }
+}
+
+#[Attribute(Attribute::TARGET_METHOD)]
+final class LinkedSecondAttribute implements \Componenta\Interceptor\InterceptorInterface
+{
+    public function intercept(\Componenta\Interceptor\CallableContextInterface $context, \Componenta\Interceptor\ContextHandlerInterface $handler): mixed
+    {
+        return 'second:' . $handler->handle($context);
+    }
+}
+
+final class LinkedAttributeTarget
+{
+    #[LinkedPendingFirst]
+    #[LinkedPendingSecond]
+    public function run(): string
+    {
+        return 'value';
+    }
+}
+
+it('includes an earlier attribute made available during discovery of a later declaration', function (): void {
+    $pipeline = new InterceptingExecutor(
+        new \Componenta\Interceptor\Tests\Fixture\PassThroughExecutor(),
+        new AttributeInterceptor(new \Componenta\Interceptor\Tests\Fixture\FactoryStub()),
+    );
+    $loader = static function (string $class): void {
+        if ($class === 'LinkedPendingSecond') {
+            class_alias(LinkedFirstAttribute::class, 'LinkedPendingFirst');
+            class_alias(LinkedSecondAttribute::class, $class);
+        }
+    };
+
+    spl_autoload_register($loader);
+    try {
+        $target = [new LinkedAttributeTarget(), 'run'];
+        expect($pipeline->call($target))->toBe('first:second:value')
+            ->and($pipeline->call($target))->toBe('first:second:value');
+    } finally {
+        spl_autoload_unregister($loader);
+    }
+});

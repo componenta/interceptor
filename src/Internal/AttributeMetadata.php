@@ -37,21 +37,46 @@ final class AttributeMetadata
     public static function resolve(ReflectionFunctionAbstract $reflector, bool &$cacheable): array
     {
         $cacheable = true;
-        $attributes = $reflector->getAttributes();
         $selected = [];
-        foreach ($attributes as $attribute) {
+        $pending = [];
+
+        foreach ($reflector->getAttributes() as $position => $attribute) {
             $name = $attribute->getName();
-            // Discover the declaration once. Two separate autoloading is_a()
-            // probes can load an Intercept subclass between the checks.
-            if (!class_exists($name) && !interface_exists($name, false) && !trait_exists($name, false)) {
-                $cacheable = false;
+            if (!class_exists($name) && !self::isAvailable($name)) {
+                $pending[$position] = $attribute;
                 continue;
             }
-            if (is_a($name, Intercept::class, true) || is_a($name, InterceptorInterface::class, true)) {
-                $selected[] = $attribute;
+            if (self::isInterceptor($name)) {
+                $selected[$position] = $attribute;
             }
         }
-        return $selected;
+
+        // A later autoloader can make an earlier declaration available.
+        // Recheck only unresolved symbols, without executing more autoloaders.
+        if ($pending !== []) {
+            foreach ($pending as $position => $attribute) {
+                $name = $attribute->getName();
+                if (!self::isAvailable($name)) {
+                    $cacheable = false;
+                    continue;
+                }
+                if (self::isInterceptor($name)) {
+                    $selected[$position] = $attribute;
+                }
+            }
+            ksort($selected);
+        }
+
+        return array_values($selected);
     }
 
+    private static function isAvailable(string $name): bool
+    {
+        return class_exists($name, false) || interface_exists($name, false) || trait_exists($name, false);
+    }
+
+    private static function isInterceptor(string $name): bool
+    {
+        return is_a($name, Intercept::class, true) || is_a($name, InterceptorInterface::class, true);
+    }
 }
