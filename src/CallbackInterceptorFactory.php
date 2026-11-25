@@ -66,8 +66,7 @@ final class CallbackInterceptorFactory
         $callback = NativeCallable::capture($callback);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($callback): mixed {
-                $modified = $callback($context);
-                return $handler->handle($modified ?? $context);
+                return $handler->handle(self::applyBefore($callback, $context));
             }
         );
     }
@@ -145,10 +144,22 @@ final class CallbackInterceptorFactory
         $after = NativeCallable::capture($after);
         return new CallbackInterceptor(
             static function (CallableContextInterface $context, ContextHandlerInterface $handler) use ($before, $after): mixed {
-                $modified = $before($context);
-                $result = $handler->handle($modified ?? $context);
-                return $after($result, $modified ?? $context);
+                $modified = self::applyBefore($before, $context);
+                $result = $handler->handle($modified);
+                return $after($result, $modified);
             }
         );
+    }
+    private static function applyBefore(callable $callback, CallableContextInterface $context): CallableContextInterface
+    {
+        $modified = $callback($context);
+        if ($modified === null) {
+            return $context;
+        }
+        if (!$modified instanceof CallableContextInterface) {
+            throw new \TypeError('Before interceptor callback must return a callable context or null.');
+        }
+
+        return $modified;
     }
 }

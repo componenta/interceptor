@@ -127,7 +127,7 @@ final class ArgumentBinding
                 throw new ArgumentCountError(sprintf(
                     'Missing required argument $%s for %s.',
                     $name,
-                    $reflector?->getName() ?? 'callable',
+                    $reflector->getName(),
                 ));
             }
         }

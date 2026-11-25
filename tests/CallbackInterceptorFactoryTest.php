@@ -218,3 +218,23 @@ it('captures the after callback before discovery of the before callback can chan
         spl_autoload_unregister($loader);
     }
 });
+
+it('rejects invalid before results before calling the downstream handler', function (string $kind): void {
+    $called = false;
+    $afterCalled = false;
+    $before = static fn (): int => 42;
+    $after = static function (mixed $result) use (&$afterCalled): mixed {
+        $afterCalled = true;
+        return $result;
+    };
+    $interceptor = $kind === 'before'
+        ? CallbackInterceptorFactory::before($before)
+        : CallbackInterceptorFactory::around($before, $after);
+
+    expect(fn () => runWith($interceptor, static function () use (&$called): string {
+        $called = true;
+        return 'value';
+    }))->toThrow(TypeError::class, 'Before interceptor callback must return a callable context or null.');
+
+    expect($called)->toBeFalse()->and($afterCalled)->toBeFalse();
+})->with(['before', 'around']);

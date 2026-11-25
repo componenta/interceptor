@@ -18,9 +18,6 @@ use Componenta\Interceptor\InterceptorInterface;
  */
 final readonly class CallbackInterceptor implements InterceptorInterface
 {
-    /**
-     * @var callable(CallableContextInterface, ContextHandlerInterface): mixed
-     */
     private Closure $callback;
 
     /**

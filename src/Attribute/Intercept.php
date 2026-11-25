@@ -23,7 +23,7 @@ class Intercept
     public readonly array $params;
 
     /**
-     * @param non-empty-string $interceptor Factory entry identifier.
+     * @param string $interceptor Factory entry identifier.
      * @param array<string|int, mixed> $params Constructor parameters.
      */
     public function __construct(string $interceptor, array $params = [])
