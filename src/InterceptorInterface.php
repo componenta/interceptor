@@ -15,11 +15,7 @@ namespace Componenta\Interceptor;
  * - perform logic after the handler returns
  * - short-circuit execution by not delegating further
  *
- * Implementations SHOULD:
- * - invoke {@see ContextHandlerInterface::handle()} at most once
- *   unless intentionally terminating the pipeline
- * - treat the handler as an opaque continuation
- *
+ * Treat the handler as an opaque continuation.
  * Implementations MUST NOT:
  * - invoke the handler more than once
  * - retain references to the handler or context beyond execution

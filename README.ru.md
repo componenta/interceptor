@@ -1,6 +1,6 @@
 # Componenta Interceptor
 
-![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-blue)
+![PHP 8.5.13+](https://img.shields.io/badge/PHP-8.5.13%2B-blue)
 ![License MIT](https://img.shields.io/badge/License-MIT-green)
 
 Middleware-конвейер для PHP-коллаблов. Оборачивает любую функцию, метод или замыкание сквозной логикой (логирование, кэширование, транзакции, авторизация, сериализация), объявленной через `pipe()` или атрибуты на методах.
@@ -15,10 +15,10 @@ composer require componenta/interceptor
 
 ## Требования
 
-- PHP 8.4+
+- PHP 8.5.13+
 - `psr/container`
-- `componenta/di` (`CallableExecutorInterface`, `FactoryInterface`, `ParametersResolver`)
-- `componenta/reflection` (ленивое разрешение рефлектора)
+- `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolver`)
+- `componenta/reflection` 3 (ленивое разрешение рефлектора)
 - `componenta/config` (опционально — интеграция через `ConfigProvider`)
 
 ## Связанные пакеты
@@ -230,7 +230,7 @@ PreparedCallable распознаётся в call(), handle() и intercept(), в
 
 `componenta/interceptor-app` подготавливает обычный массив позиций атрибутов через `app:build`. Карта сокращает повторную классификацию классов атрибутов и позволяет пропустить чтение атрибутов для методов без интерцепторов. Создание аргументов, допустимость target и повторяемость проверяет PHP. Runtime работает и без артефакта.
 
-Версия 3 использует DI 5 и Config 3. Удалены ключи `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` и формат массива дескрипторов в конструкторе. Настройкой `interceptors.map_file` управляет App-интеграция. Старый кеш цепочек со слабой ссылкой на конечный обработчик удалён.
+Эта версия использует DI 6, Reflection 3 и Config 3. Удалены ключи `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` и формат массива дескрипторов в конструкторе. Настройкой `interceptors.map_file` управляет App-интеграция. Старый кеш цепочек со слабой ссылкой на конечный обработчик удалён.
 
 ## Подключение в контейнер
 

@@ -1,6 +1,6 @@
 # Componenta Interceptor
 
-![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-blue)
+![PHP 8.5.13+](https://img.shields.io/badge/PHP-8.5.13%2B-blue)
 ![License MIT](https://img.shields.io/badge/License-MIT-green)
 
 Middleware-style interceptor pipeline for PHP callables. Wrap any function, method or closure with cross-cutting logic (logging, caching, transactions, authorization, serialization) declared either via `pipe()` or method-level attributes.
@@ -15,10 +15,10 @@ composer require componenta/interceptor
 
 ## Requirements
 
-- PHP 8.4+
+- PHP 8.5.13+
 - `psr/container`
-- `componenta/di` (`CallableExecutorInterface`, `FactoryInterface`, `ParametersResolver`)
-- `componenta/reflection` (lazy reflector resolution)
+- `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolver`)
+- `componenta/reflection` 3 (lazy reflector resolution)
 - `componenta/config` (optional `ConfigProvider` integration)
 
 ## Related Packages
@@ -230,7 +230,7 @@ Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` reta
 
 `componenta/interceptor-app` prepares a plain array of attribute positions through `app:build`. The map avoids repeated classification of attribute classes and can skip attribute reads for methods without interceptors. PHP remains responsible for argument construction, attribute targets and repeatability. Runtime works without this artifact.
 
-Version 3 uses DI 5 and Config 3. The old `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` keys and descriptor-array constructor argument are removed. App integration owns the optional `interceptors.map_file` setting. The old weak-terminal chain cache is removed.
+This version uses DI 6, Reflection 3 and Config 3. The old `COMPILED_INTERCEPTORS`, `COMPILED_INTERCEPTORS_FILE`, `CACHE_VERSION` keys and descriptor-array constructor argument are removed. App integration owns the optional `interceptors.map_file` setting. The old weak-terminal chain cache is removed.
 
 ## Container Wiring
 

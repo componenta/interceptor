@@ -4,10 +4,10 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^8.4",
+        "php": "^8.5.13",
         "componenta/config": "^3.0.0",
-        "componenta/di": "^5.0.0",
-        "componenta/reflection": "^2.0.1",
+        "componenta/di": "^6.0@dev",
+        "componenta/reflection": "^3.0",
         "componenta/scope": "^1.0",
         "psr/container": "^2.0"
     },
@@ -32,7 +32,7 @@
             ]
         },
         "branch-alias": {
-            "dev-main": "3.0.x-dev"
+            "dev-main": "4.0.x-dev"
         }
     },
     "config": {
@@ -42,5 +42,6 @@
     },
     "scripts": {
         "test": "@php vendor/bin/pest"
-    }
+    },
+    "prefer-stable": true
 }

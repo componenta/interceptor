@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Interceptor;
 
-use Componenta\DI\CallableExecutorInterface;
+use Componenta\DI\CallableInvokerInterface;
 use Componenta\DI\PreparedCallable;
 use Componenta\Interceptor\Internal\ResolvedCallableContext;
 use Throwable;
@@ -13,7 +13,7 @@ use Throwable;
  * Terminal handler that invokes the callable from context.
  *
  * This handler serves as the end of the interceptor chain,
- * using {@see CallableExecutorInterface} for every invocation, including
+ * using {@see CallableInvokerInterface} for every invocation, including
  * calls whose arguments have already been prepared.
  *
  * @example
@@ -27,10 +27,10 @@ final readonly class ContextHandler implements ContextHandlerInterface
     /**
      * Creates a new context handler.
      *
-     * @param CallableExecutorInterface $executor Executor for callable invocation.
+     * @param CallableInvokerInterface $executor Executor for callable invocation.
      */
     public function __construct(
-        private CallableExecutorInterface $executor,
+        private CallableInvokerInterface $executor,
     ) {
     }
 
