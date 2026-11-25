@@ -263,6 +263,17 @@ return [
 
 `componenta/router-app` consumes `PipelineInterface` when it executes route handlers. Applications usually configure the interceptor list in their `src/ConfigProvider.php`.
 
+## Development
+
+```bash
+composer install
+composer test
+composer bench:smoke
+composer bench
+```
+
+The [PHPBench suite](benchmarks/README.md) compares native, DI and interceptor execution on equivalent fixtures.
+
 ## License
 
 MIT

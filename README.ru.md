@@ -263,6 +263,17 @@ return [
 
 `componenta/router-app` использует `PipelineInterface` при выполнении обработчиков маршрутов. Обычно приложение задает список перехватчиков в `src/ConfigProvider.php`.
 
+## Разработка
+
+```bash
+composer install
+composer test
+composer bench:smoke
+composer bench
+```
+
+Набор бенчмарков сравнивает нативный вызов, DI и различные режимы перехвата на эквивалентных сценариях.
+
 ## Лицензия
 
 MIT

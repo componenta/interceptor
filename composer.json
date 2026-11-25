@@ -12,7 +12,8 @@
         "psr/container": "^2.0"
     },
     "require-dev": {
-        "pestphp/pest": "^4.0"
+        "pestphp/pest": "^4.0",
+        "phpbench/phpbench": "^1.7"
     },
     "autoload": {
         "psr-4": {
@@ -38,10 +39,25 @@
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
+        },
+        "policy": {
+            "abandoned": {
+                "ignore": {
+                    "doctrine/annotations": {
+                        "on-block": false,
+                        "reason": "PHPBench 1.x development-only dependency; benchmarks use native attributes."
+                    }
+                }
+            }
         }
     },
     "scripts": {
-        "test": "@php vendor/bin/pest"
+        "test": "@php vendor/bin/pest",
+        "bench": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php vendor/bin/phpbench run --config=phpbench.json.dist --report=aggregate --report=env"
+        ],
+        "bench:smoke": "@php vendor/bin/phpbench run --config=phpbench.json.dist --revs=1 --iterations=1 --warmup=0 --report=aggregate"
     },
     "prefer-stable": true
 }
