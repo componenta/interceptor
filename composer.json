@@ -5,8 +5,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.5.13",
-        "componenta/config": "^3.0.0",
-        "componenta/di": "dev-refactor/di6-parameter-resolution-contract as 6.0.x-dev",
+        "componenta/config": "^4.0",
+        "componenta/di": "^6.0",
         "componenta/reflection": "^3.0",
         "componenta/scope": "^1.0"
     },
@@ -64,11 +64,5 @@
         "analyse": "@php vendor/bin/phpstan analyse src --level=max",
         "test:coverage": "@php vendor/bin/pest --coverage"
     },
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/componenta/di"
-        }
-    ]
+    "prefer-stable": true
 }

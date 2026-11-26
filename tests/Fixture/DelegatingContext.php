@@ -8,7 +8,7 @@ use Componenta\Interceptor\CallableContextInterface;
 use ReflectionFunctionAbstract;
 
 /** An alternative context implementation preserving the public context contract. */
-final class DelegatingContext implements CallableContextInterface
+class DelegatingContext implements CallableContextInterface
 {
     public function __construct(private readonly CallableContextInterface $context) {}
 

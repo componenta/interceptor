@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use Componenta\Config\ConfigFactory;
 use Componenta\Config\Environment;
+use Componenta\DI\Container;
 use Componenta\DI\ContainerFactory;
 use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\ConfigKey;
@@ -31,9 +32,29 @@ function httpFactoryContainer(mixed $interceptors): \Componenta\Config\Container
     );
     return (new ContainerFactory())->create($composition->config, $composition->dependencies);
 }
-it('resolves callable parameters before configured HTTP interceptors execute', function (): void {
-    $pipeline = httpFactoryContainer([HttpFactoryInterceptor::class])->get(PipelineInterface::class);
-    expect($pipeline->call(static fn (HttpFactoryDependency $dependency): string => $dependency->value))->toBe('resolved:resolved');
+it('resolves the current dependency before configured HTTP interceptors on cold and warm calls', function (): void {
+    $container = httpFactoryContainer([HttpFactoryInterceptor::class]);
+    $pipeline = $container->get(PipelineInterface::class, PipelineInterface::class);
+    $root = $container->get(Container::class, Container::class);
+    $target = new class {
+        public function handle(HttpFactoryDependency $dependency): string
+        {
+            return $dependency->value;
+        }
+    };
+
+    expect($pipeline->call([$target, 'handle']))->toBe('resolved:resolved')
+        ->and($pipeline->call([$target, 'handle']))->toBe('resolved:resolved');
+
+    $replacement = new HttpFactoryDependency();
+    $replacement->value = 'rebound';
+    $root->set(HttpFactoryDependency::class, $replacement);
+
+    expect($pipeline->call([$target, 'handle']))->toBe('rebound:rebound');
+
+    $other = httpFactoryContainer([HttpFactoryInterceptor::class])
+        ->get(PipelineInterface::class, PipelineInterface::class);
+    expect($other->call([$target, 'handle']))->toBe('resolved:resolved');
 });
 it('reports malformed interceptor configuration before executing a callable', function (): void {
     expect(fn () => httpFactoryContainer('wrong')->get(PipelineInterface::class))->toThrow(\Componenta\DI\Exception\ResolutionException::class, ConfigKey::HTTP_INTERCEPTORS);

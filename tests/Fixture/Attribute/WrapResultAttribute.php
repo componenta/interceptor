@@ -16,7 +16,7 @@ use Componenta\Interceptor\InterceptorInterface;
  * lets tests confirm the attribute was actually invoked without sharing
  * mutable state across cases.
  */
-#[Attribute(Attribute::TARGET_METHOD | Attribute::IS_REPEATABLE)]
+#[Attribute(Attribute::TARGET_METHOD | Attribute::TARGET_FUNCTION | Attribute::IS_REPEATABLE)]
 final readonly class WrapResultAttribute implements InterceptorInterface
 {
     public function __construct(

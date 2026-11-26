@@ -9,10 +9,12 @@ use Componenta\DI\CallableExecutorInterface;
 use Componenta\DI\FactoryInterface;
 use Componenta\Interceptor\Attribute\Intercept;
 use Componenta\Interceptor\AttributeInterceptor;
+use Componenta\Interceptor\CallableContext;
 use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\ContextHandlerInterface;
 use Componenta\Interceptor\InterceptingExecutor;
 use Componenta\Interceptor\InterceptorInterface;
+use Componenta\Interceptor\Tests\Fixture\DelegatingContext;
 
 final class NativeValue
 {
@@ -124,12 +126,16 @@ it('retains native attribute target and repeatability errors', function (string 
     expect(fn () => $pipeline->call([new NativeAttributeTarget(), $method]))->toThrow(Error::class);
 })->with(['wrongTarget', 'repeated']);
 
-it('does not retry a failing attribute constructor', function (): void {
+it('propagates a failing attribute constructor once per call with cold and cached metadata', function (): void {
     ThrowingNativeAttribute::$constructions = 0;
     $pipeline = nativeAttributePipeline();
     expect(fn () => $pipeline->call([new NativeAttributeTarget(), 'failure']))
         ->toThrow(RuntimeException::class, 'native constructor failed');
     expect(ThrowingNativeAttribute::$constructions)->toBe(1);
+
+    expect(fn () => $pipeline->call([new NativeAttributeTarget(), 'failure']))
+        ->toThrow(RuntimeException::class, 'native constructor failed');
+    expect(ThrowingNativeAttribute::$constructions)->toBe(2);
 });
 
 it('preserves every declared policy in declaration order on cold and warm calls', function (): void {
@@ -139,6 +145,29 @@ it('preserves every declared policy in declaration order on cold and warm calls'
     expect($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value')
         ->and($pipeline->call([$target, 'policies']))->toBe('authorization:cache:value');
 });
+
+it('keeps metadata supplied by a custom reflector local to its context', function (bool $customFirst): void {
+    $pipeline = nativeAttributePipeline();
+    $native = new CallableContext([new NativeAttributeTarget(), 'nested']);
+    $custom = new class ($native) extends DelegatingContext {
+        public ?ReflectionFunctionAbstract $reflector {
+            get => new class (NativeAttributeTarget::class, 'nested') extends ReflectionMethod {
+                public function getAttributes(?string $name = null, int $flags = 0): array
+                {
+                    return [];
+                }
+            };
+        }
+    };
+
+    $calls = [[$custom, 'value'], [$native, '1:value']];
+    if (!$customFirst) {
+        $calls = array_reverse($calls);
+    }
+    foreach ($calls as [$context, $expected]) {
+        expect($pipeline->handle($context))->toBe($expected);
+    }
+})->with(['custom first' => true, 'native first' => false]);
 
 it('retains declaration errors on subsequent attempts', function (string $method): void {
     $pipeline = nativeAttributePipeline();

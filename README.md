@@ -18,7 +18,8 @@ composer require componenta/interceptor
 - PHP 8.5.13+
 - `componenta/di` 6 (`CallableExecutorInterface`, `CallableInvokerInterface`, `FactoryInterface`, `ParametersResolverInterface`)
 - `componenta/reflection` 3 (lazy reflector resolution)
-- `componenta/config` (optional `ConfigProvider` integration)
+- `componenta/config` 4 (container configuration and service wiring)
+- `componenta/scope` 1 (interceptor scope matching)
 
 ## Related Packages
 
@@ -226,7 +227,7 @@ Prepared arguments and top-level context slots are passed by value; by-reference
 
 ## Caching
 
-`AttributeInterceptor` caches native `ReflectionAttribute` metadata for stable method and function signatures. Every reached layer constructs fresh attribute arguments and attributes via `ReflectionAttribute::newInstance()`, then calls `FactoryInterface::make()` for `Intercept` declarations. Scope selection uses the attribute and the instance returned by the factory. The factory contract may reuse instances.
+`AttributeInterceptor` caches native `ReflectionAttribute` metadata for stable method and function signatures. Reflector subclasses supplied by alternative contexts are queried on each invocation. Every reached layer constructs fresh attribute arguments and attributes via `ReflectionAttribute::newInstance()`, then calls `FactoryInterface::make()` for `Intercept` declarations. Scope selection uses the attribute and the instance returned by the factory. The factory contract may reuse instances.
 
 Declarations whose attribute classes are not yet available are rechecked on later invocations; incomplete classification is not retained in the metadata cache.
 
@@ -234,6 +235,7 @@ Explicit interceptor instances passed to `InterceptingExecutor` or `pipe()` reta
 
 Native source declarations are authoritative. Interception does not require a generated attribute map or an application build. Stable declaration metadata is classified once per signature; unavailable attribute classes are rechecked. PHP remains responsible for argument construction, targets and repeatability when the declaration is reached. The attribute chain and execution scope are selected at entry to `AttributeInterceptor`. Replace a target or scope before that interceptor if its selection should change. Subsequent trusted interceptors can modify the invocation context, but the selected attribute chain is not re-discovered. Do not use post-selection target replacement as an authorization mechanism.
 
+When upgrading from Interceptor 3, remove the `componenta/interceptor-app` 3 dependency and its config provider. Register `Componenta\Interceptor\ConfigProvider` to use native attribute discovery.
 
 ## Container Wiring
 

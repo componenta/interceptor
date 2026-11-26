@@ -10,6 +10,8 @@ use Componenta\Interceptor\Internal\AttributeMetadata;
 use Componenta\Scope\ScopeInterface;
 use InvalidArgumentException;
 use ReflectionAttribute;
+use ReflectionFunction;
+use ReflectionMethod;
 
 /**
  * Executes native attributes in declaration order.
@@ -37,7 +39,11 @@ final class AttributeInterceptor implements InterceptorInterface
         if ($reflector === null) {
             return $handler->handle($context);
         }
-        $signature = AttributeMetadata::signature($reflector);
+        // Caller-provided subclasses can supply different metadata for the same declaration.
+        $nativeMetadata = $context instanceof CallableContext
+            || $reflector::class === ReflectionFunction::class
+            || $reflector::class === ReflectionMethod::class;
+        $signature = $nativeMetadata ? AttributeMetadata::signature($reflector) : null;
         $attributes = $signature === null ? null : ($this->attributes[$signature] ?? null);
         if ($attributes === null) {
             $cacheable = true;

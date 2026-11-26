@@ -317,12 +317,20 @@ it('rejects a factory result outside the interceptor contract and recovers on th
         ->and($factory->calls)->toHaveCount(2);
 });
 
-it('does not construct a factory interceptor excluded by its attribute scope', function (): void {
-    $factory = new FactoryStub();
+it('checks the attribute scope against the current invocation on cold and warm calls', function (): void {
+    $log = [];
+    $factory = attributeFactory($log);
     $interceptor = new AttributeInterceptor($factory);
+    $handler = terminal();
+    $http = methodContext('attributeScopedHttp', [CallableContext::SCOPE_ATTRIBUTE => Scope::HTTP]);
+    $console = $http->withAttribute(CallableContext::SCOPE_ATTRIBUTE, Scope::CONSOLE);
 
-    expect($interceptor->intercept(methodContext('attributeScopedHttp', [
-        CallableContext::SCOPE_ATTRIBUTE => Scope::CONSOLE,
-    ]), terminal()))->toBe('attr-scoped')
+    expect($interceptor->intercept($console, $handler))->toBe('attr-scoped')
         ->and($factory->calls)->toBe([]);
+
+    expect($interceptor->intercept($http, $handler))->toBe('attr-scoped')
+        ->and($interceptor->intercept($console, $handler))->toBe('attr-scoped')
+        ->and($interceptor->intercept($http, $handler))->toBe('attr-scoped')
+        ->and($factory->calls)->toHaveCount(2)
+        ->and($log)->toBe(['A:before', 'A:after', 'A:before', 'A:after']);
 });
