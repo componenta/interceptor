@@ -74,9 +74,11 @@ final class CallbackInterceptorFactory
     /**
      * Creates an interceptor that executes after the handler.
      *
-     * The callback receives the result and can transform it.
+     * Calls $callback($result, $context) after a successful continuation.
+     * Its return value replaces the result. The first parameter may declare
+     * the target's result type, which PHP validates at invocation.
      *
-     * @param callable(mixed, CallableContextInterface): mixed $callback
+     * @param callable $callback
      */
     public static function after(callable|string|array $callback): InterceptorInterface
     {
@@ -130,8 +132,12 @@ final class CallbackInterceptorFactory
     /**
      * Creates an interceptor that wraps execution with before and after callbacks.
      *
+     * Calls $after($result, $modifiedContext) after a successful continuation.
+     * Its first parameter may declare the target's result type; PHP validates
+     * that type at invocation. Its return value replaces the result.
+     *
      * @param callable(CallableContextInterface): ?CallableContextInterface $before
-     * @param callable(mixed, CallableContextInterface): mixed $after
+     * @param callable $after
      */
     public static function around(callable|string|array $before, callable|string|array $after): InterceptorInterface
     {

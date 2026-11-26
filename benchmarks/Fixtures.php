@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Componenta\Interceptor\Benchmarks;
 
 use Attribute;
+use Componenta\Interceptor\Attribute\After;
 use Componenta\Interceptor\Attribute\Intercept;
+use Componenta\Interceptor\Attribute\InterceptCallback;
 use Componenta\Interceptor\CallableContextInterface;
 use Componenta\Interceptor\ContextHandlerInterface;
 use Componenta\Interceptor\InterceptorInterface;
@@ -54,6 +56,20 @@ final class BenchTarget
 
     #[Intercept(ForwardInterceptor::class)]
     public function factoryAttribute(int $value): int
+    {
+        return $value;
+    }
+
+    #[After(static function (mixed $result): mixed { return $result; })]
+    public function afterAttribute(int $value): int
+    {
+        return $value;
+    }
+
+    #[InterceptCallback(static function (CallableContextInterface $context, ContextHandlerInterface $next): mixed {
+        return $next->handle($context);
+    })]
+    public function callbackAttribute(int $value): int
     {
         return $value;
     }

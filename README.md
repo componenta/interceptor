@@ -143,6 +143,47 @@ final readonly class WrapJson implements InterceptorInterface
 }
 ```
 
+### Callback attributes
+
+`After` transforms a successful result. `InterceptCallback` controls the continuation:
+
+```php
+use Componenta\Interceptor\Attribute\After;
+use Componenta\Interceptor\Attribute\InterceptCallback;
+use Componenta\Interceptor\CallableContextInterface;
+use Componenta\Interceptor\ContextHandlerInterface;
+
+#[After(static function (mixed $result): array {
+    return ['data' => $result];
+})]
+function listItems(): array { return ['first', 'second']; }
+
+#[InterceptCallback(static function (
+    CallableContextInterface $context,
+    ContextHandlerInterface $next,
+): mixed {
+    if ($context->getAttribute('preview', false)) {
+        return ['preview' => true];
+    }
+
+    return $next->handle($context);
+})]
+function loadReport(): array { return ['ready' => true]; }
+```
+
+| Attribute | Callback inputs | Returned result |
+|---|---|---|
+| `After` | Successful result, then `CallableContextInterface` | The callback's exact return value, including null. |
+| `InterceptCallback` | `CallableContextInterface`, then `ContextHandlerInterface` | The callback's exact return value; it may invoke the continuation zero, one, or multiple times. |
+
+Both attributes are repeatable on methods and functions, run in every scope, and compose in the same declaration order as `Intercept`. `After` calls the continuation once; its callback is skipped if that continuation throws. Callback and continuation exceptions propagate unchanged. A short circuit skips construction of all inner layers.
+
+Callbacks use native PHP invocation with the listed arguments. Additional required service arguments are not resolved through DI. A user-defined callback may omit unused trailing arguments; internal functions must accept the complete argument vector. Use a factory-created interceptor when the interceptor needs injected services.
+
+PHP 8.5.13+ supports a capture-free `static function` directly in an attribute argument, or a first-class reference such as `After(self::formatResult(...))`. Private static method scope is preserved, including methods used from traits. Arrow functions and `use` captures are not supported in this constant-expression syntax. Runtime construction, for example `new After($closure)`, follows ordinary PHP closure rules.
+
+Only reflection metadata is cached. Each reached callback attribute is materialized for that invocation; previous results and invocation contexts are not retained in the metadata cache.
+
 ### Scopes
 
 Restrict where an interceptor runs by implementing `Componenta\Scope\ScopedInterface` on the attribute or on the interceptor instance:

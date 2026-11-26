@@ -40,6 +40,7 @@ final class InterceptorBench
             'closure-native', 'closure-di', 'closure-pipeline', 'closure-prepared',
             'pipeline-0', 'pipeline-1', 'pipeline-5', 'pipeline-10', 'pipeline-50',
             'attribute-none', 'attribute-native', 'attribute-factory', 'attribute-five', 'attribute-short-circuit',
+            'attribute-after', 'attribute-callback',
             'nested-pipeline', 'di-preparation', 'di-preparation-edit',
             'prepared-native', 'prepared-edit', 'magic-native', 'magic-prepared', 'magic-edit',
             'context-handle', 'context-copy',
@@ -82,6 +83,8 @@ final class InterceptorBench
                 'attribute-none' => 'plain',
                 'attribute-native' => 'nativeAttribute',
                 'attribute-factory' => 'factoryAttribute',
+                'attribute-after' => 'afterAttribute',
+                'attribute-callback' => 'callbackAttribute',
                 'attribute-five' => 'fiveAttributes',
                 'attribute-short-circuit' => 'shortCircuit',
             };

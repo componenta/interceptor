@@ -143,6 +143,47 @@ final readonly class WrapJson implements InterceptorInterface
 }
 ```
 
+### Атрибуты с функциями обратного вызова
+
+`After` преобразует успешный результат. `InterceptCallback` управляет продолжением цепочки:
+
+```php
+use Componenta\Interceptor\Attribute\After;
+use Componenta\Interceptor\Attribute\InterceptCallback;
+use Componenta\Interceptor\CallableContextInterface;
+use Componenta\Interceptor\ContextHandlerInterface;
+
+#[After(static function (mixed $result): array {
+    return ['data' => $result];
+})]
+function listItems(): array { return ['first', 'second']; }
+
+#[InterceptCallback(static function (
+    CallableContextInterface $context,
+    ContextHandlerInterface $next,
+): mixed {
+    if ($context->getAttribute('preview', false)) {
+        return ['preview' => true];
+    }
+
+    return $next->handle($context);
+})]
+function loadReport(): array { return ['ready' => true]; }
+```
+
+| Атрибут | Аргументы функции | Результат |
+|---|---|---|
+| `After` | Успешный результат, затем `CallableContextInterface` | Значение, возвращённое функцией, включая null. |
+| `InterceptCallback` | `CallableContextInterface`, затем `ContextHandlerInterface` | Значение, возвращённое функцией; продолжение можно вызвать ноль, один или несколько раз. |
+
+Оба атрибута допускают повторение на методах и функциях, действуют во всех областях применения и соблюдают тот же порядок объявления, что и `Intercept`. `After` вызывает продолжение один раз и пропускает функцию преобразования, если продолжение выбросило исключение. Исключения передаются без изменения. Досрочное завершение цепочки пропускает создание всех внутренних слоёв.
+
+Функция вызывается средствами PHP с указанными аргументами. Дополнительные обязательные зависимости через DI не разрешаются. Пользовательская функция может опустить неиспользуемые последние аргументы; встроенная функция должна принимать весь передаваемый набор. Для внедрения сервисов используйте перехватчик, создаваемый фабрикой.
+
+PHP 8.5.13+ позволяет передать в аргумент атрибута `static function` без захвата переменных либо ссылку вида `After(self::formatResult(...))`. Область видимости закрытых статических методов сохраняется, в том числе при использовании трейтов. Стрелочные функции и захват через `use` в таком константном выражении не поддерживаются. Создание во время исполнения, например `new After($closure)`, использует обычные правила замыканий PHP.
+
+Кэшируются только метаданные рефлексии. Каждый достигнутый атрибут создаётся для текущего вызова; предыдущие результаты и контексты вызовов в кэше метаданных не сохраняются.
+
 ### Скопы
 
 Ограничение области применения перехватчика — реализация `Componenta\Scope\ScopedInterface` на атрибуте или на инстансе:
